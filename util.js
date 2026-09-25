@@ -85,7 +85,7 @@ window.R = (function () {
     }
     const list = [], seen = new Set();
     body.forEach((r, i) => {
-      const num = numKey(r[ni]); if (!num || seen.has(num)) return; seen.add(num);
+      const num = numKey(r[ni]); if (!num || !/\d/.test(num) || num.length > 6 || seen.has(num)) return; seen.add(num);
       const data = {};
       headers.forEach((h, j) => {
         if (j === ni || r[j] == null || String(r[j]).trim() === '') return;
