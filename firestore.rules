@@ -64,6 +64,12 @@ service cloud.firestore {
       }
     }
 
+    // Copias de seguridad: las guardan los cronometristas del club antes de borrar; las ven y restauran los administradores.
+    match /backups/{id} {
+      allow read, delete: if esAdmin();
+      allow create: if esCronoDe(request.resource.data.clubId);
+    }
+
     // Sincronización del reloj de cada usuario.
     match /ping/{uid} {
       allow read, write: if conSesion() && request.auth.uid == uid;

@@ -1,6 +1,6 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, stageOf, ofStage, fmtKmh, kmText, results, neutralOf, start2Of } = window.R;
+  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, stageOf, ofStage, fmtKmh, kmText, results, neutralOf, start2Of, exportXlsx } = window.R;
   let data = { raceId: null, race: null, arrivals: [], participants: [], meta: {} };
   let buf = '', sel = null, view = 'lleg', online = navigator.onLine;
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -216,7 +216,11 @@
     else if (act === 'group') { const t = +x.dataset.t; sel = (sel && sel.k === 'g' && sel.t === t) ? null : { k: 'g', t }; }
     else if (act === 'addto') { sel = { k: 'g', t: +x.dataset.t }; msg('Escribí o tocá el número para sumarlo a este grupo.'); }
     else if (act === 'delh') { S.remove(x.dataset.id); sel = null; }
-    else if (act === 'delg') { const t = +x.dataset.t; S.removeMany(data.arrivals.filter(a => a.t === t).map(a => a.id)); sel = null; }
+    else if (act === 'delg') {
+      const t = +x.dataset.t, ids = data.arrivals.filter(a => a.t === t).map(a => a.id);
+      if (ids.length > 1 && x.dataset.armed !== '1') { x.dataset.armed = '1'; x.textContent = '¿Borrar los ' + ids.length + '? Tocá de nuevo'; return; }
+      S.removeMany(ids); sel = null; msg('Grupo borrado (' + ids.length + ' caballo' + (ids.length > 1 ? 's' : '') + ').');
+    }
     else if (act === 'close') sel = null;
     render();
   });
@@ -268,7 +272,7 @@
     $('pmsg').textContent = 'Guardando…'; $('pmsg').className = 'msg';
     try {
       await S.importParticipants(parsed.list, replace);
-      $('pmsg').textContent = 'Listo: ' + parsed.list.length + ' caballos ' + (replace ? 'en la lista.' : 'agregados o actualizados.');
+      $('pmsg').textContent = 'Listo: ' + parsed.list.length + ' caballos ' + (replace ? 'en la lista. La lista anterior quedó guardada en una copia de seguridad.' : 'agregados o actualizados.');
       $('paste').value = ''; $('pfile-name').textContent = ''; preview();
     } catch (x) { $('pmsg').textContent = 'No se pudo guardar: ' + (x.message || x); $('pmsg').className = 'msg warn'; }
   }
@@ -279,7 +283,11 @@
   });
   $('pclear').addEventListener('click', () => { $('pclear-confirm').hidden = false; });
   $('pclear-no').addEventListener('click', () => { $('pclear-confirm').hidden = true; });
-  $('pclear-yes').addEventListener('click', async () => { $('pclear-confirm').hidden = true; await S.clearParticipants(); $('pmsg').textContent = 'Lista borrada.'; $('pmsg').className = 'msg'; });
+  $('pclear-yes').addEventListener('click', async () => {
+    $('pclear-confirm').hidden = true; $('pmsg').textContent = 'Guardando copia y borrando…'; $('pmsg').className = 'msg';
+    try { await S.clearParticipants(); $('pmsg').textContent = 'Lista borrada. Quedó una copia de seguridad que un administrador puede restaurar.'; }
+    catch (x) { $('pmsg').textContent = (x && x.message) || String(x); $('pmsg').className = 'msg warn'; }
+  });
   $('psearch').addEventListener('input', renderParts);
   $('plist').addEventListener('change', e => {
     const s = e.target.closest('select[data-num]'); if (!s) return;
@@ -317,6 +325,16 @@
   $('start0').addEventListener('change', e => S.setRace({ start0: e.target.value }));
   $('neutral').addEventListener('change', e => { const v = e.target.value === '' ? 60 : Math.max(0, parseInt(e.target.value, 10) || 0); S.setRace({ neutral: v }); });
   $('race-status').addEventListener('change', e => S.setRace({ status: e.target.value }));
+  $('xlsx').addEventListener('click', async () => {
+    $('msg2').textContent = 'Preparando el Excel…';
+    try { await exportXlsx({ race: data.race, arrivals: data.all, participants: parts() }); $('msg2').textContent = 'Excel descargado.'; }
+    catch (x) { $('msg2').textContent = (x && x.message) || String(x); }
+  });
+  $('backup-now').addEventListener('click', async () => {
+    $('msg2').textContent = 'Guardando copia…';
+    try { await S.backupNow('Copia manual'); $('msg2').textContent = 'Copia de seguridad guardada. Los administradores la ven en Administración → Copias.'; }
+    catch (x) { $('msg2').textContent = (x && x.message) || String(x); }
+  });
   $('copy').addEventListener('click', () => {
     const txt = sheet(data.all, data.race, parts()), box = $('copybox');
     const fb = () => { box.hidden = false; box.value = txt; box.select(); $('msg2').textContent = 'Seleccioná el texto y copialo.'; };

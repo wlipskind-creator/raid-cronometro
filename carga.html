@@ -125,6 +125,7 @@
       <div class="card">
         <h2>Cargar lista de participantes</h2>
         <p>Pegá la lista copiada desde Excel o WhatsApp (una fila por caballo), o elegí un archivo Excel o CSV. La primera columna, o la que se llame <b>N°</b>, es el número del caballo. Las demás columnas (Caballo, Jinete, Categoría…) se guardan tal cual.</p>
+        <p><a href="plantilla-participantes.xlsx" download="participantes-raid.xlsx">Descargar la plantilla Excel</a> para completarla y después subirla acá.</p>
         <textarea class="paste" id="paste" placeholder="N°&#9;Caballo&#9;Jinete&#10;27&#9;Gateado&#9;B. Olivera&#10;14&#9;Bagual&#9;D. Fernández"></textarea>
         <div class="actions">
           <label class="ghost" for="pfile" style="cursor:pointer">Elegir archivo…</label>
@@ -137,7 +138,7 @@
           <button class="ghost danger" id="preplace" disabled>Reemplazar toda la lista</button>
         </div>
         <div class="actions" id="pclear-row"><button class="ghost danger" id="pclear">Borrar la lista…</button></div>
-        <div class="actions" id="pclear-confirm" hidden><span style="font-size:14px">¿Borrar todos los participantes? Las llegadas no se tocan.</span><button class="ghost danger" id="pclear-yes">Sí, borrar</button><button class="ghost" id="pclear-no">Cancelar</button></div>
+        <div class="actions" id="pclear-confirm" hidden><span style="font-size:14px">¿Borrar todos los participantes? Las llegadas no se tocan. Antes se guarda una copia de seguridad.</span><button class="ghost danger" id="pclear-yes">Sí, borrar</button><button class="ghost" id="pclear-no">Cancelar</button></div>
         <div class="msg" id="pmsg"></div>
       </div>
     </section>
@@ -152,6 +153,7 @@
             <option value="">Automático según la fecha</option><option value="proximo">Próximo</option><option value="en_curso">En curso</option><option value="terminado">Terminado</option>
           </select></div>
         <p>El público ve los raids ordenados por estado: en curso, próximos y terminados.</p>
+        <div class="actions"><button class="ghost" id="xlsx">Descargar en Excel</button><button class="ghost" id="backup-now">Guardar copia de seguridad</button></div>
         <div class="actions"><button class="ghost" id="copy">Copiar planilla</button><a class="ghost" id="public-link" href="index.html" target="_blank" rel="noopener" style="text-decoration:none">Ver en el panel público</a></div>
         <textarea class="copybox" id="copybox" readonly hidden></textarea>
         <div class="msg" id="msg2"></div>

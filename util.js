@@ -172,6 +172,31 @@ window.R = (function () {
     if (out.length) { L.push(''); L.push('N°\tCaballo / Jinete\tEstado'); out.forEach(p => L.push([p.num, pName(p), STATUS[statusOf(p)]].join('\t'))); }
     return L.join('\n');
   }
+  // Copia en Excel de un raid: llegadas de cada etapa, participantes y resultados.
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => ko(new Error('No se pudo preparar el Excel. Revisá la conexión.')); document.head.appendChild(sc); });
+  }
+  async function exportXlsx(snap, fileName) {
+    await loadXLSX();
+    const race = snap.race || {}, all = snap.arrivals || [], parts = snap.participants || [], pm = pMap(parts);
+    const wb = XLSX.utils.book_new();
+    const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+    add('Raid', [['Raid', race.name || ''], ['Localidad', race.place || ''], ['Fecha', race.date || ''], ['Km 1ª etapa', kmOf(race.km1) || ''], ['Km 2ª etapa', kmOf(race.km2) || ''],
+      ['Largada 1ª etapa', race.start0 || ''], ['Neutralización (min)', neutralOf(race)], ['Largada 2ª etapa (1°)', start2Of(race, all)], ['Copia del', new Date().toLocaleString('es-UY')]]);
+    [1, 2].forEach(st => {
+      const rows = [['Orden', 'N°', 'Caballo / Jinete', 'Grupo', 'Hora de llegada', 'Dif. con el 1°']]; let pos = 0;
+      const gs = groups(ofStage(all, st)); const f = gs[0];
+      gs.forEach((g, i) => g.horses.forEach(a => { pos++; rows.push([pos, a.num || '?', pName(pm[a.num]), i + 1, hms(g.t), '+' + dur(g.t - f.t)]); }));
+      add('Llegadas ' + st + 'ª', rows);
+    });
+    const keys = [...new Set(parts.flatMap(p => Object.keys(p.data || {})))];
+    add('Participantes', [['N°', ...keys, 'Estado']].concat(parts.slice().sort(byNum).map(p => [p.num, ...keys.map(k => (p.data || {})[k] || ''), STATUS[statusOf(p)]])));
+    const res = results(all, race, parts), n = v => v == null ? '' : Math.round(v * 100) / 100;
+    add('Resultados', [['Puesto', 'N°', 'Caballo / Jinete', 'Tiempo 1ª', 'Prom. 1ª (km/h)', 'Tiempo 2ª', 'Prom. 2ª (km/h)', 'Tiempo total', 'Prom. general (km/h)']]
+      .concat(res.rows.map(r => [r.pos || (r.out ? STATUS[statusOf(r.p)] : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)])));
+    XLSX.writeFile(wb, fileName || ((race.name || 'raid').replace(/[\\/:*?"<>|]/g, '') + '.xlsx'));
+  }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // ---------- Raids y clubes ----------
@@ -218,5 +243,5 @@ window.R = (function () {
   return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, sheet, esc, registerSW,
     STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
-    stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of };
+    stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx };
 })();

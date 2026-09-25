@@ -260,3 +260,5 @@ textarea.paste{width:100%;min-height:7em;font:14px/1.4 ui-monospace,Menlo,monosp
 @media (max-width:420px){.rtable{font-size:13px}.rtable th,.rtable td{padding:7px 6px}.rtable td.n{font-size:18px}}
 .brandrow{display:flex;align-items:center;gap:14px}
 .brandmark{width:clamp(52px,11vw,72px);height:auto;border-radius:22%;flex:0 0 auto}
+.danger-card{border-color:var(--danger)}
+.danger-card h2{color:var(--danger)}

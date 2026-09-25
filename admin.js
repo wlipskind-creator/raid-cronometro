@@ -1,7 +1,7 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm } = window.R;
-  let clubs = [], races = [], staff = [], admins = [], me = '';
+  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm, exportXlsx } = window.R;
+  let clubs = [], races = [], staff = [], admins = [], backups = [], me = '', delRace = null, restoring = null;
   let editRace = null, editClub = null, editStaff = null, logoData = null, confirmKey = null;
 
   if (S.mode === 'demo') $('demo-banner').hidden = false;
@@ -33,6 +33,7 @@
       S.watchRaces(l => { races = l; renderRaces(); renderClubs(); });
       S.watchStaff(l => { staff = l.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email)); renderStaff(); });
       S.watchAdmins(l => { admins = l; renderAdmins(); });
+      S.watchBackups(l => { backups = l; renderBackups(); });
     }
   });
   $('login-form').addEventListener('submit', e => {
@@ -42,7 +43,7 @@
   $('logout').addEventListener('click', () => S.signOut());
   $('logout2').addEventListener('click', () => S.signOut());
 
-  const VIEWS = ['raids', 'clubs', 'staff', 'admins'];
+  const VIEWS = ['raids', 'clubs', 'staff', 'admins', 'backups'];
   function setView(v) { VIEWS.forEach(k => { $('tab-' + k).setAttribute('aria-selected', k === v); $('view-' + k).hidden = k !== v; $('view-' + k).style.display = k === v ? 'flex' : 'none'; }); }
   VIEWS.forEach(k => $('tab-' + k).addEventListener('click', () => setView(k)));
 
@@ -50,7 +51,7 @@
   // Botón de borrar con confirmación en dos toques
   function armed(key) { if (confirmKey === key) { confirmKey = null; return true; } confirmKey = key; renderAll(); setTimeout(() => { if (confirmKey === key) { confirmKey = null; renderAll(); } }, 4000); return false; }
   const delBtn = (key, label) => '<button class="ghost danger" data-del="' + esc(key) + '">' + (confirmKey === key ? '¿Seguro? Tocá de nuevo' : label) + '</button>';
-  function renderAll() { renderRaces(); renderClubs(); renderStaff(); renderAdmins(); renderClubOptions(); }
+  function renderAll() { renderRaces(); renderClubs(); renderStaff(); renderAdmins(); renderBackups(); renderClubOptions(); }
 
   // ---------- Raids ----------
   function renderClubOptions() {
@@ -65,7 +66,7 @@
     $('raid-list').innerHTML = l.length ? l.map(r => {
       const st = raceStatus(r), c = clubs.find(x => x.id === r.clubId);
       return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(r.name || 'Raid') + '</b><small>' + esc(clubPlace(r, c)) + ' · ' + esc(fmtDate(r.date)) + ' · <span class="badge ' + st + '">' + RSTATUS[st] + '</span>' + (r.status ? '' : ' (automático)') + '</small></div>'
-        + '<div class="actions"><button class="ghost" data-edit-race="' + esc(r.id) + '">Editar</button>' + delBtn('race:' + r.id, 'Borrar') + '</div></div>';
+        + '<div class="actions"><button class="ghost" data-edit-race="' + esc(r.id) + '">Editar</button><button class="ghost danger" data-delrace="' + esc(r.id) + '">Borrar</button></div></div>';
     }).join('') : '<div class="empty-list">Todavía no hay raids.</div>';
   }
   $('raid-list').addEventListener('click', async e => {
@@ -76,12 +77,21 @@
       $('raid-form-title').textContent = 'Editar raid'; $('r-save').textContent = 'Guardar cambios'; $('r-cancel').hidden = false; note('r-msg', '');
       $('raid-form').scrollIntoView({ behavior: 'smooth' }); return;
     }
-    const d = e.target.closest('[data-del]');
-    if (d && d.dataset.del.startsWith('race:')) {
-      const id = d.dataset.del.slice(5);
-      if (!armed(d.dataset.del)) return;
-      try { await S.deleteRace(id); note('r-msg', 'Raid borrado, con sus llegadas y participantes.'); } catch (x) { note('r-msg', errText(x), true); }
+    const d = e.target.closest('[data-delrace]');
+    if (d) {
+      const r = races.find(x => x.id === d.dataset.delrace); if (!r) return;
+      delRace = r.id; $('rdel').hidden = false; $('rdel-input').value = ''; $('rdel-yes').disabled = true;
+      $('rdel-text').innerHTML = 'Vas a borrar <b>' + esc(r.name || 'Raid') + '</b> (' + esc(fmtDate(r.date)) + ') con <b>todas sus llegadas y su lista de participantes</b>.';
+      $('rdel').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  });
+  $('rdel-input').addEventListener('input', () => { $('rdel-yes').disabled = $('rdel-input').value.trim().toUpperCase() !== 'BORRAR'; });
+  $('rdel-no').addEventListener('click', () => { delRace = null; $('rdel').hidden = true; });
+  $('rdel-yes').addEventListener('click', async () => {
+    if (!delRace) return;
+    $('rdel-yes').disabled = true; note('r-msg', 'Guardando copia y borrando…');
+    try { await S.deleteRace(delRace); note('r-msg', 'Raid borrado. Quedó una copia de seguridad en la pestaña Copias.'); $('rdel').hidden = true; delRace = null; }
+    catch (x) { note('r-msg', errText(x), true); $('rdel-yes').disabled = false; }
   });
   function kmTotal() { const t = kmOf($('r-km1').value) + kmOf($('r-km2').value); $('r-kmt').textContent = t ? '= ' + fmtKm(t) : ''; }
   ['r-km1', 'r-km2'].forEach(id => $(id).addEventListener('input', kmTotal));
@@ -183,6 +193,32 @@
     }
     try { await S.saveStaff(email, { name: $('s-name').value.trim(), clubs: cl }); note('s-msg', 'Guardado: ' + email + ' puede cronometrar en ' + cl.map(clubName).join(', ') + '.' + extra); resetStaffForm(); }
     catch (x) { note('s-msg', errText(x), true); }
+  });
+
+  // ---------- Copias de seguridad ----------
+  const when = ms => { const d = new Date(ms); return d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }); };
+  function renderBackups() {
+    $('backup-list').innerHTML = backups.length ? backups.map(b => '<div class="arow"><span class="logo logo-txt" style="width:40px;height:40px;font-size:13px">' + esc(when(b.atMs).split(' ').slice(0, 2).join(' ')) + '</span><div class="main"><b>' + esc(b.raceName || 'Raid') + '</b><small>' + esc(when(b.atMs)) + ' · ' + esc(b.reason || '') + '<br>' + (b.nArr || 0) + ' llegadas · ' + (b.nPart || 0) + ' participantes · por ' + esc(b.by || '') + '</small></div>'
+      + '<div class="actions"><button class="ghost" data-bdown="' + esc(b.id) + '">Excel</button><button class="ghost" data-brest="' + esc(b.id) + '">Restaurar</button>' + delBtn('backup:' + b.id, 'Borrar') + '</div></div>').join('')
+      : '<div class="empty-list">Todavía no hay copias. Se crean solas antes de cada borrado.</div>';
+  }
+  $('backup-list').addEventListener('click', async e => {
+    const dn = e.target.closest('[data-bdown]');
+    if (dn) { const b = backups.find(x => x.id === dn.dataset.bdown); if (!b) return; note('b-msg', 'Preparando el Excel…');
+      try { await exportXlsx(b, 'Copia ' + (b.raceName || 'raid') + ' ' + new Date(b.atMs).toISOString().slice(0, 16).replace('T', ' ').replace(':', 'h') + '.xlsx'); note('b-msg', 'Excel descargado.'); } catch (x) { note('b-msg', errText(x), true); } return; }
+    const rs = e.target.closest('[data-brest]');
+    if (rs) { const b = backups.find(x => x.id === rs.dataset.brest); if (!b) return; restoring = b; $('brest').hidden = false; $('brest-input').value = ''; $('brest-yes').disabled = true;
+      $('brest-text').innerHTML = 'El raid <b>' + esc(b.raceName || 'Raid') + '</b> va a quedar como estaba el <b>' + esc(when(b.atMs)) + '</b>: ' + (b.nArr || 0) + ' llegadas y ' + (b.nPart || 0) + ' participantes.';
+      $('brest').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const d = e.target.closest('[data-del]');
+    if (d && d.dataset.del.startsWith('backup:')) { if (!armed(d.dataset.del)) return; try { await S.deleteBackup(d.dataset.del.slice(7)); note('b-msg', 'Copia borrada.'); } catch (x) { note('b-msg', errText(x), true); } }
+  });
+  $('brest-input').addEventListener('input', () => { $('brest-yes').disabled = $('brest-input').value.trim().toUpperCase() !== 'RESTAURAR'; });
+  $('brest-no').addEventListener('click', () => { restoring = null; $('brest').hidden = true; });
+  $('brest-yes').addEventListener('click', async () => {
+    if (!restoring) return; $('brest-yes').disabled = true; note('b-msg', 'Restaurando…');
+    try { await S.restoreBackup(restoring); note('b-msg', 'Listo: el raid quedó como en la copia. Lo que había antes quedó guardado en una copia nueva.'); $('brest').hidden = true; restoring = null; }
+    catch (x) { note('b-msg', errText(x), true); $('brest-yes').disabled = false; }
   });
 
   // ---------- Administradores ----------
