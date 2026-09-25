@@ -31,6 +31,12 @@ service cloud.firestore {
           && request.resource.data.num.size() <= 6;
         allow delete: if esCronometrista();
       }
+
+      // Participantes y su estado (en carrera, abandono, retirado).
+      match /participants/{num} {
+        allow read: if true;
+        allow write: if esCronometrista();
+      }
     }
 
     // Sincronización del reloj de cada cronometrista.

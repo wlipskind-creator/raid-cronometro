@@ -145,3 +145,48 @@ textarea.copybox{width:100%;min-height:8em;font:14px/1.4 ui-monospace,Menlo,mono
 @media (min-width:760px){.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}}
 @media (max-width:380px){.row{grid-template-columns:2em 3em 2.8em 1fr 1fr}.clock{font-size:38px}.mark{font-size:30px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* roles */
+.roles{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px;align-items:center;flex-wrap:wrap}
+.roles .lbl{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+.roles button{flex:1;border:0;background:transparent;border-radius:7px;padding:7px 8px;font-weight:600;font-size:14px;color:var(--muted)}
+.roles button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs{flex-wrap:wrap}
+
+/* panel de números */
+.tileshead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--muted)}
+.tileshead b{color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(4.4em,1fr));gap:6px;max-height:232px;overflow-y:auto;padding:2px;overscroll-behavior:contain}
+.tile{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:6px 4px;text-align:center;font-family:var(--display);font-weight:700;font-size:24px;line-height:1.05;touch-action:manipulation;min-width:0}
+.tile small{display:block;font-family:var(--body);font-weight:500;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile:active{background:var(--sel);border-color:var(--accent)}
+.tiles .none{grid-column:1/-1;font-size:14px;color:var(--muted);padding:8px 2px}
+
+/* participantes */
+.pstats{display:flex;flex-wrap:wrap;gap:6px}
+.pstat{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.pstat b{font-family:var(--display);font-size:17px;margin-right:3px}
+.plist{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.prow{display:grid;grid-template-columns:3.2em 1fr auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow .pn2{font-family:var(--display);font-weight:700;font-size:24px}
+.prow .pi{min-width:0;font-size:14px;line-height:1.3}
+.prow .pi b{font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .pi small{display:block;color:var(--muted);font-size:12.5px}
+.prow .pi .arr{color:var(--accent);font-weight:600}
+.prow select{font:inherit;font-size:14px;font-weight:600;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--ink)}
+.prow.st-abandono select{border-color:var(--danger);color:var(--danger)}
+.prow.st-retirado select{border-color:var(--pend);color:var(--pend)}
+.prow.st-abandono .pn2,.prow.st-retirado .pn2{opacity:.55;text-decoration:line-through}
+.search{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%}
+textarea.paste{width:100%;min-height:7em;font:14px/1.4 ui-monospace,Menlo,monospace;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.chip .nm{display:block;font-family:var(--body);font-weight:500;font-size:10.5px;color:var(--muted);max-width:6em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .n small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pn small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted);max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outlist{display:flex;flex-wrap:wrap;gap:6px}
+.outlist .pn.ab{border-color:var(--danger);color:var(--danger)}
+.outlist .pn.rt{border-color:var(--pend);color:var(--pend)}
+.outlist .pn small{max-width:12em}
+.tabs button{padding:8px 10px;font-size:13.5px}
+.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:0 0 auto}

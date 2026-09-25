@@ -73,6 +73,21 @@ h2{font-size:clamp(30px,6.4vw,56px)}
 .tag.o{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
 .tag.y{background:var(--pend-bg);color:var(--pend);border:1px solid var(--pend)}
 
+/* roles y panel de números */
+.m-roles{display:flex;gap:4px;background:var(--slide);border:1px solid var(--line);border-radius:10px;padding:3px}
+.m-roles span{flex:1;text-align:center;border-radius:7px;padding:6px 4px;font-weight:600;font-size:13px;color:var(--muted)}
+.m-roles span.on{background:var(--accent);color:var(--accent-ink)}
+.m-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.m-tiles span{border:1px solid var(--line);background:var(--slide);border-radius:8px;padding:4px 2px;text-align:center;font-family:var(--display);font-weight:700;font-size:20px;line-height:1.05}
+.m-tiles span small{display:block;font-family:var(--body);font-weight:500;font-size:9.5px;color:var(--muted)}
+.m-tiles span.hit{background:var(--sel);border-color:var(--accent)}
+.m-prow{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--slide);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px}
+.m-prow b{font-family:var(--display);font-size:22px;min-width:1.8em}
+.m-prow .who{flex:1;line-height:1.25}
+.m-prow .st{font-weight:600;border:1px solid var(--line);border-radius:7px;padding:3px 7px;white-space:nowrap}
+.m-prow .st.ab{color:var(--danger);border-color:var(--danger)}
+.m-prow .st.rt{color:var(--pend);border-color:var(--pend)}
+.m-prow.out b{text-decoration:line-through;opacity:.55}
 /* idea central */
 .flow{display:grid;grid-template-columns:1fr;gap:12px;flex:1;align-content:center}
 @media (min-width:760px){.flow{grid-template-columns:1fr auto 1fr}}
@@ -143,6 +158,27 @@ h2{font-size:clamp(30px,6.4vw,56px)}
       </div>
     </section>
 
+
+    <!-- Rol -->
+    <section class="slide" aria-label="Tu rol">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Antes de empezar</div>
+          <h2>Elegí tu rol</h2>
+          <ul class="list">
+            <li class="key"><b>Completo</b>Tomás el tiempo y cargás los números. Como siempre: el planillero toca LLEGÓ y los colaboradores le cantan los números.</li>
+            <li><b>Marcador</b>Solo ves el botón LLEGÓ.</li>
+            <li><b>Planillero</b>Solo cargás números, sobre las llegadas que marca el marcador.</li>
+          </ul>
+        </div>
+        <div class="mock">
+          <div class="m-roles"><span class="on">Completo</span><span>Marcador</span><span>Planillero</span></div>
+          <div class="m-mark">Llegó<small>Tocá una vez por cada caballo</small></div>
+          <p class="lead" style="font-size:15px">Se elige arriba de la pantalla de Llegadas y queda guardado en tu celular.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- 3 -->
     <section class="slide" aria-label="Paso 1">
       <div class="cols">
@@ -183,14 +219,15 @@ h2{font-size:clamp(30px,6.4vw,56px)}
         <div style="display:flex;flex-direction:column;gap:14px">
           <div class="eyebrow">Paso 3</div>
           <h2>Cargá los números</h2>
-          <p class="lead">Escribí el número del caballo y tocá <b>OK</b>. Va a la primera ficha amarilla <span class="tag y">?</span>.</p>
-          <p class="lead">Seguí con el siguiente, <b>en el orden en que llegaron</b>.</p>
+          <p class="lead"><b>Tocá el número en el panel</b>, o escribilo y tocá <b>OK</b>. Va a la primera ficha amarilla <span class="tag y">?</span>, en el orden en que llegaron.</p>
+          <p class="lead">El panel muestra solo los caballos <b>en carrera que no llegaron</b>. Si escribís un dígito, se achica a los que empiezan con ese número.</p>
         </div>
         <div class="mock">
           <div class="m-grp"><div class="m-gh"><b>Grupo 5</b><span class="num">11:43:52</span><span class="d num">+1:35</span></div>
             <div class="m-chips"><span class="m-chip">19<small>7°</small></span><span class="m-chip">22<small>8°</small></span><span class="m-chip p s">?<small>9°</small></span><span class="m-chip p">?<small>10°</small></span></div></div>
-          <div class="m-buf"><span>Número para Grupo 5</span><b class="num">11</b></div>
-          <div class="m-pad"><span class="hit">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="ok">OK</span></div>
+          <div class="m-buf"><span>Número para Grupo 5 · en carrera sin llegar</span></div>
+          <div class="m-tiles num"><span>6<small>Chimango</small></span><span>9<small>Zorzal</small></span><span class="hit">11<small>Malacara</small></span><span>12<small>Ñandú</small></span><span>18<small>Tero</small></span><span>24<small>Carancho</small></span><span>36<small>Hornero</small></span><span>41<small>Yaguareté</small></span></div>
+          <div class="m-pad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="ok">OK</span></div>
         </div>
       </div>
     </section>
@@ -223,6 +260,24 @@ h2{font-size:clamp(30px,6.4vw,56px)}
       </ul>
     </section>
 
+
+    <!-- Participantes -->
+    <section class="slide" aria-label="Participantes y estados">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Pestaña Participantes</div>
+          <h2>La lista y los estados</h2>
+          <p class="lead">Antes de la carrera se carga la lista: <b>se pega desde Excel o WhatsApp</b>, o se elige un archivo.</p>
+          <p class="lead">Cada caballo está <b>En carrera</b>, <b>Abandono</b> o <b>Retirado</b>. Los que salen de carrera desaparecen del panel de números y figuran tachados en la largada.</p>
+        </div>
+        <div class="mock">
+          <div class="m-prow"><b class="num">24</b><span class="who">Carancho · H. Suárez<br><small style="color:var(--muted)">80 km Jóvenes</small></span><span class="st">En carrera</span></div>
+          <div class="m-prow out"><b class="num">17</b><span class="who">Alazán · G. Martínez<br><small style="color:var(--muted)">80 km</small></span><span class="st ab">Abandono</span></div>
+          <div class="m-prow out"><b class="num">25</b><span class="who">Overo · I. Ramos<br><small style="color:var(--muted)">80 km</small></span><span class="st rt">Retirado</span></div>
+        </div>
+      </div>
+    </section>
+
     <!-- 8 -->
     <section class="slide" aria-label="Largada">
       <div class="cols">
@@ -230,7 +285,7 @@ h2{font-size:clamp(30px,6.4vw,56px)}
           <div class="eyebrow">Pestaña Largada 2ª</div>
           <h2>La largada se arma sola</h2>
           <p class="lead">Se carga la <b>hora de largada del primero</b> y la app calcula la de cada caballo, con la misma diferencia con que llegó.</p>
-          <p class="lead">Los de un mismo grupo <b>largan juntos</b>.</p>
+          <p class="lead">Los de un mismo grupo <b>largan juntos</b>. Los que abandonaron o se retiraron figuran tachados y no largan.</p>
         </div>
         <div style="overflow-x:auto">
           <table class="tbl num">
@@ -251,7 +306,7 @@ h2{font-size:clamp(30px,6.4vw,56px)}
       <div class="eyebrow">El día de la carrera</div>
       <h2>Cuatro reglas</h2>
       <ul class="list two">
-        <li class="key"><b>Una sola persona toca LLEGÓ</b>Los demás ayudan cargando números. Si dos marcan el mismo caballo, aparece dos veces.</li>
+        <li class="key"><b>Uno marca, uno carga números</b>Puede ser la misma persona (Completo) o dos (Marcador y Planillero). Nunca dos marcando a la vez: el caballo aparece dos veces.</li>
         <li><b>Sin señal, seguí igual</b>Se guarda en el teléfono y se envía solo cuando vuelve la conexión.</li>
         <li><b>Abrila antes, con señal</b>Así queda guardada en el celular. Usá "Agregar a pantalla de inicio".</li>
         <li><b>Batería cargada</b>La app mantiene la pantalla encendida mientras la usás.</li>

@@ -1,15 +1,11 @@
 // ============================================================
-//  CONFIGURACIÓN DE FIREBASE
-//  Reemplazá este bloque por el que te da Firebase
-//  (Configuración del proyecto > Tus apps > Web > firebaseConfig).
-//  Mientras diga PEGAR_AQUI, la app funciona en MODO DEMOSTRACIÓN:
-//  los datos quedan solo en ese navegador y no se comparten.
+//  CONFIGURACIÓN DE FIREBASE (proyecto raid-cronometro)
 // ============================================================
 window.FIREBASE_CONFIG = {
-  apiKey: "PEGAR_AQUI",
-  authDomain: "PEGAR_AQUI",
-  projectId: "PEGAR_AQUI",
-  storageBucket: "PEGAR_AQUI",
-  messagingSenderId: "PEGAR_AQUI",
-  appId: "PEGAR_AQUI"
+  apiKey: "AIzaSyAjHHOK-igCTxetu1hWPc9LuTEf2CfA3jo",
+  authDomain: "raid-cronometro.firebaseapp.com",
+  projectId: "raid-cronometro",
+  storageBucket: "raid-cronometro.firebasestorage.app",
+  messagingSenderId: "831477709533",
+  appId: "1:831477709533:web:37eff5564f9a586069f934"
 };

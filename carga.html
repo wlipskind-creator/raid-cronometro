@@ -36,7 +36,8 @@
   <div id="app" hidden style="display:flex;flex-direction:column;gap:14px">
     <div class="tabs" role="tablist">
       <button id="tab-lleg" role="tab" aria-selected="true">Llegadas</button>
-      <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª</button>
+      <button id="tab-larg" role="tab" aria-selected="false">Largada</button>
+      <button id="tab-part" role="tab" aria-selected="false">Participantes</button>
       <button id="tab-carr" role="tab" aria-selected="false">Carrera</button>
     </div>
 
@@ -44,6 +45,12 @@
 
     <!-- LLEGADAS -->
     <section id="view-lleg" style="display:flex;flex-direction:column;gap:14px">
+      <div class="roles" role="group" aria-label="Mi rol">
+        <span class="lbl">Mi rol</span>
+        <button data-rol="completo" aria-pressed="true">Completo</button>
+        <button data-rol="marcador" aria-pressed="false">Marcador</button>
+        <button data-rol="planillero" aria-pressed="false">Planillero</button>
+      </div>
       <div class="clockrow">
         <div><div class="clocklbl" id="clocklbl">Hora</div><div class="clock num" id="clock">--:--:--</div></div>
         <div class="elapsed"><div class="clocklbl">Desde el 1°</div><div class="v num" id="since">—</div></div>
@@ -52,6 +59,10 @@
       <button class="same" id="same">+ Otro caballo, mismo tiempo<span class="sub" id="same-sub">Suma un caballo al último grupo</span></button>
       <div class="entry">
         <div class="entryhead"><div class="target" id="target">—</div><div class="buf empty num" id="buf">000</div></div>
+        <div id="tiles-wrap" hidden style="display:flex;flex-direction:column;gap:6px">
+          <div class="tileshead"><span id="tiles-title">En carrera, sin llegar</span><span>Tocá el número</span></div>
+          <div class="tiles" id="tiles"></div>
+        </div>
         <div class="pad" id="pad">
           <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
           <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
@@ -75,6 +86,31 @@
         <div class="field"><label for="start1">Hora de largada del 1°</label><input id="start1" type="time" step="1" class="num"></div>
       </div>
       <div class="table" id="startlist"></div>
+    </section>
+
+    <!-- PARTICIPANTES -->
+    <section id="view-part" hidden style="flex-direction:column;gap:14px">
+      <div class="pstats" id="pstats"></div>
+      <input class="search" id="psearch" type="search" placeholder="Buscar por número, caballo o jinete">
+      <div class="plist" id="plist"></div>
+      <div class="card">
+        <h2>Cargar lista de participantes</h2>
+        <p>Pegá la lista copiada desde Excel o WhatsApp (una fila por caballo), o elegí un archivo Excel o CSV. La primera columna, o la que se llame <b>N°</b>, es el número del caballo. Las demás columnas (Caballo, Jinete, Categoría…) se guardan tal cual.</p>
+        <textarea class="paste" id="paste" placeholder="N°&#9;Caballo&#9;Jinete&#10;27&#9;Gateado&#9;B. Olivera&#10;14&#9;Bagual&#9;D. Fernández"></textarea>
+        <div class="actions">
+          <label class="ghost" for="pfile" style="cursor:pointer">Elegir archivo…</label>
+          <input id="pfile" type="file" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain" hidden>
+          <span class="count" id="pfile-name"></span>
+        </div>
+        <div class="msg" id="ppreview"></div>
+        <div class="actions">
+          <button class="primary" id="pimport" disabled>Agregar a la lista</button>
+          <button class="ghost danger" id="preplace" disabled>Reemplazar toda la lista</button>
+        </div>
+        <div class="actions" id="pclear-row"><button class="ghost danger" id="pclear">Borrar la lista…</button></div>
+        <div class="actions" id="pclear-confirm" hidden><span style="font-size:14px">¿Borrar todos los participantes? Las llegadas no se tocan.</span><button class="ghost danger" id="pclear-yes">Sí, borrar</button><button class="ghost" id="pclear-no">Cancelar</button></div>
+        <div class="msg" id="pmsg"></div>
+      </div>
     </section>
 
     <!-- CARRERA -->
