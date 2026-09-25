@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1D6A43">
-<title>Raid · Panel en vivo</title>
-<meta name="description" content="Llegadas de la 1ª etapa y largada de la 2ª etapa, en vivo.">
+<title>Raids · En vivo</title>
+<meta name="description" content="Raids hípicos: llegadas de la 1ª etapa y largada de la 2ª etapa, en vivo.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
@@ -13,47 +13,70 @@
 </head>
 <body>
 <div class="wrap wide">
-  <div class="p-head">
-    <div>
-      <div class="p-title" id="race-name">Raid</div>
-      <div class="p-sub">Neutralización · llegadas de la 1ª etapa y largada de la 2ª</div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-      <span class="pill" id="status">Conectando…</span>
-      <span class="p-sub num" id="updated"></span>
-    </div>
-  </div>
-
-  <div class="banner" id="demo-banner" hidden><b>Modo demostración.</b> Este panel muestra datos de ejemplo guardados en este navegador.</div>
+  <div class="banner" id="demo-banner" hidden><b>Modo demostración.</b> Se muestran datos de ejemplo guardados en este navegador.</div>
   <div class="banner" id="nosdk-banner" hidden><b>Sin conexión.</b> Revisá internet y recargá la página.</div>
 
-  <div class="p-strip" id="strip"></div>
-
-  <div class="tabs" role="tablist" style="align-self:flex-start">
-    <button id="tab-lleg" role="tab" aria-selected="true">Llegadas 1ª etapa</button>
-    <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª etapa</button>
-  </div>
-
-  <section id="view-lleg" style="display:flex;flex-direction:column;gap:10px">
-    <div class="last" id="last" hidden></div>
-    <div class="pgrid groups" id="list"></div>
-    <div id="rest" hidden style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
-      <h2 style="font-size:22px">Todavía en carrera</h2>
-      <div class="outlist" id="falta"></div>
-      <div id="fuera-wrap" hidden style="display:flex;flex-direction:column;gap:10px">
-        <h2 style="font-size:22px">Abandonos y retirados</h2>
-        <div class="outlist" id="fuera"></div>
+  <!-- LISTA DE RAIDS -->
+  <section id="home" style="display:flex;flex-direction:column;gap:18px">
+    <div class="p-head">
+      <div>
+        <div class="p-title" id="app-title">Raids</div>
+        <div class="p-sub" id="app-sub">Llegadas y largadas en vivo</div>
       </div>
     </div>
+    <div id="races" style="display:flex;flex-direction:column;gap:20px"><div class="table"><div class="empty-list">Cargando raids…</div></div></div>
+    <p class="foot"><a href="carga.html">Ingreso de cronometristas</a></p>
   </section>
 
-  <section id="view-larg" hidden style="flex-direction:column;gap:10px">
-    <div class="nextcard" id="next" hidden></div>
-    <p class="foot" id="larg-note"></p>
-    <div class="table" id="startlist"></div>
-  </section>
+  <!-- UN RAID -->
+  <section id="raid" hidden style="flex-direction:column;gap:14px">
+    <button class="back" id="back">← Todos los raids</button>
+    <div class="p-head">
+      <div class="rhead">
+        <span id="race-logo"></span>
+        <div class="t">
+          <div class="p-title" id="race-name" style="font-size:clamp(26px,5.5vw,44px)">Raid</div>
+          <div class="p-sub" id="race-sub"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="pill" id="status">Conectando…</span>
+        <span class="p-sub num" id="updated"></span>
+      </div>
+    </div>
 
-  <p class="foot">Se actualiza solo, no hace falta recargar. <a href="carga.html">Ingreso de cronometristas</a></p>
+    <div class="p-strip" id="strip"></div>
+
+    <div class="actions" style="justify-content:space-between">
+      <div class="tabs" role="tablist">
+        <button id="tab-lleg" role="tab" aria-selected="true">Llegadas 1ª etapa</button>
+        <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª etapa</button>
+      </div>
+      <button class="ghost" id="share">Copiar link de este raid</button>
+    </div>
+    <div class="msg" id="share-msg"></div>
+
+    <section id="view-lleg" style="display:flex;flex-direction:column;gap:10px">
+      <div class="last" id="last" hidden></div>
+      <div class="pgrid groups" id="list"></div>
+      <div id="rest" hidden style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+        <h2 style="font-size:22px">Todavía en carrera</h2>
+        <div class="outlist" id="falta"></div>
+        <div id="fuera-wrap" hidden style="display:flex;flex-direction:column;gap:10px">
+          <h2 style="font-size:22px">Abandonos y retirados</h2>
+          <div class="outlist" id="fuera"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-larg" hidden style="flex-direction:column;gap:10px">
+      <div class="nextcard" id="next" hidden></div>
+      <p class="foot" id="larg-note"></p>
+      <div class="table" id="startlist"></div>
+    </section>
+
+    <p class="foot">Se actualiza solo, no hace falta recargar. <a href="carga.html">Ingreso de cronometristas</a></p>
+  </section>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

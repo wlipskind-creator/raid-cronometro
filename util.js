@@ -97,11 +97,47 @@ window.R = (function () {
     return L.join('\n');
   }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Raids y clubes ----------
+  const RSTATUS = { en_curso: 'En curso', proximo: 'Próximo', terminado: 'Terminado' };
+  const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  // Estado del raid: el que se eligió a mano o, si no, según la fecha.
+  function raceStatus(r) {
+    if (r && RSTATUS[r.status]) return r.status;
+    const d = r && r.date, t = todayStr();
+    if (!d) return 'proximo';
+    return d > t ? 'proximo' : (d === t ? 'en_curso' : 'terminado');
+  }
+  const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
+  function fmtDate(s) {
+    if (!s) return 'Sin fecha';
+    const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d);
+    return DIAS[dt.getDay()] + ' ' + d + ' ' + MESES[m - 1] + ' ' + y;
+  }
+  // Orden: en curso, próximos (el más cercano primero), terminados (el más reciente primero).
+  function sortRaces(list) {
+    const rank = { en_curso: 0, proximo: 1, terminado: 2 };
+    return list.slice().sort((a, b) => {
+      const sa = raceStatus(a), sb = raceStatus(b);
+      if (sa !== sb) return rank[sa] - rank[sb];
+      const da = a.date || '', dbb = b.date || '';
+      return sa === 'terminado' ? dbb.localeCompare(da) : da.localeCompare(dbb);
+    });
+  }
+  function initials(name) { return String(name || '?').split(/\s+/).filter(w => w.length > 2 || /^[A-ZÁÉÍÓÚÑ]/.test(w)).slice(0, 3).map(w => w[0]).join('').toUpperCase() || '?'; }
+  function logoHTML(club, size) {
+    size = size || 40;
+    const st = 'width:' + size + 'px;height:' + size + 'px';
+    if (club && club.logo) return '<img class="logo" src="' + esc(club.logo) + '" alt="" style="' + st + '">';
+    const txt = (club && club.short) || initials(club && club.name);
+    return '<span class="logo logo-txt" style="' + st + ';font-size:' + Math.round(size * (txt.length > 3 ? .26 : .36)) + 'px">' + esc(txt) + '</span>';
+  }
   function registerSW() {
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
   return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, sheet, esc, registerSW,
-    STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap };
+    STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap,
+    RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials };
 })();

@@ -1,7 +1,7 @@
 // Guarda la app en el teléfono para que abra aunque no haya señal.
 // Estrategia: primero la red (siempre la versión más nueva) y, si no hay señal, lo guardado.
-const CACHE = 'raid-v3';
-const APP = ['./', 'index.html', 'carga.html', 'ayuda.html', 'instructivo.html', 'app.css', 'config.js', 'util.js', 'store.js', 'carga.js', 'panel.js', 'manifest.webmanifest', 'icon.svg',
+const CACHE = 'raid-v4';
+const APP = ['./', 'index.html', 'carga.html', 'ayuda.html', 'instructivo.html', 'admin.html', 'admin.js', 'app.css', 'config.js', 'util.js', 'store.js', 'carga.js', 'panel.js', 'manifest.webmanifest', 'icon.svg',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'];

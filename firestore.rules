@@ -2,46 +2,71 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Cronometristas habilitados para cargar datos.
-    // Reemplazá estos correos por los de tu equipo (entre comillas, separados por coma).
-    function esCronometrista() {
-      return request.auth != null
-        && request.auth.token.email in [
-          'cronometrista1@ejemplo.com',
-          'cronometrista2@ejemplo.com'
-        ];
+    // ADMINISTRADORES FEU iniciales. Reemplazá por tu correo (y el de tu equipo).
+    // Los demás administradores y todos los cronometristas se agregan desde la app,
+    // en la página de Administración: ya no hace falta volver a editar estas reglas.
+    function adminsIniciales() {
+      return ['admin@ejemplo.com'];
     }
 
-    // Carrera activa: todos la ven, solo cronometristas la cambian.
-    match /config/{doc} {
+    function conSesion() { return request.auth != null && request.auth.token.email != null; }
+    function yo() { return request.auth.token.email.lower(); }
+    function esAdmin() {
+      return conSesion() && (yo() in adminsIniciales()
+        || exists(/databases/$(database)/documents/admins/$(yo())));
+    }
+    // Cronometrista habilitado para un club (los administradores pueden en todos).
+    function esCronoDe(clubId) {
+      return esAdmin() || (conSesion()
+        && exists(/databases/$(database)/documents/staff/$(yo()))
+        && clubId in get(/databases/$(database)/documents/staff/$(yo())).data.clubs);
+    }
+    function clubDelRaid(raceId) {
+      return get(/databases/$(database)/documents/races/$(raceId)).data.clubId;
+    }
+
+    // Administradores y cronometristas: cada uno ve su propia ficha, los administradores ven y editan todas.
+    match /admins/{email} {
+      allow read: if conSesion() && (yo() == email || esAdmin());
+      allow write: if esAdmin();
+    }
+    match /staff/{email} {
+      allow read: if conSesion() && (yo() == email || esAdmin());
+      allow write: if esAdmin();
+    }
+
+    // Clubes: los ve todo el mundo, los editan los administradores.
+    match /clubs/{clubId} {
       allow read: if true;
-      allow write: if esCronometrista();
+      allow write: if esAdmin();
     }
 
-    // Carreras y llegadas: el público lee, los cronometristas escriben.
+    // Raids: los ve todo el mundo. Los crean y borran los administradores.
+    // Los cronometristas del club pueden cambiar el estado y la hora de largada.
     match /races/{raceId} {
       allow read: if true;
-      allow write: if esCronometrista();
+      allow create, delete: if esAdmin();
+      allow update: if esAdmin() || (esCronoDe(resource.data.clubId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['start1', 'status']));
 
       match /arrivals/{arrivalId} {
         allow read: if true;
-        allow create, update: if esCronometrista()
+        allow create, update: if esCronoDe(clubDelRaid(raceId))
           && request.resource.data.t is number
           && request.resource.data.num is string
           && request.resource.data.num.size() <= 6;
-        allow delete: if esCronometrista();
+        allow delete: if esCronoDe(clubDelRaid(raceId));
       }
 
-      // Participantes y su estado (en carrera, abandono, retirado).
       match /participants/{num} {
         allow read: if true;
-        allow write: if esCronometrista();
+        allow write: if esCronoDe(clubDelRaid(raceId));
       }
     }
 
-    // Sincronización del reloj de cada cronometrista.
+    // Sincronización del reloj de cada usuario.
     match /ping/{uid} {
-      allow read, write: if esCronometrista() && request.auth.uid == uid;
+      allow read, write: if conSesion() && request.auth.uid == uid;
     }
   }
 }

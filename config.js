@@ -9,3 +9,9 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "831477709533",
   appId: "1:831477709533:web:37eff5564f9a586069f934"
 };
+
+// Nombre que se muestra arriba en la página pública.
+window.APP_INFO = {
+  title: 'Raids FEU',
+  subtitle: 'Llegadas y largadas en vivo'
+};

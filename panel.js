@@ -1,22 +1,74 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, groups, startList, esc, STATUS, statusOf, byNum, pName, pShort, pMap } = window.R;
+  const { hms, dur, groups, startList, esc, STATUS, statusOf, byNum, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML } = window.R;
+  const INFO = window.APP_INFO || {};
   let data = { race: null, arrivals: [], participants: [], meta: {} }, lastUpdate = null, seenGroups = new Set(), firstRender = true;
+  let races = [], clubs = {}, current = null, unwatch = null;
 
   R.registerSW();
+  if (INFO.title) { $('app-title').textContent = INFO.title; document.title = INFO.title + ' · En vivo'; }
+  if (INFO.subtitle) $('app-sub').textContent = INFO.subtitle;
   if (S.mode === 'demo') $('demo-banner').hidden = false;
-  if (S.mode === 'nosdk') { $('nosdk-banner').hidden = false; setStatus('Sin conexión', 'bad'); return; }
+  if (S.mode === 'nosdk') { $('nosdk-banner').hidden = false; $('races').innerHTML = ''; return; }
 
   function setStatus(t, cls) { const p = $('status'); p.textContent = t; p.className = 'pill ' + (cls || ''); }
   function renderStatus() {
     if (S.mode === 'demo') return setStatus('Demostración', 'warn');
     if (!navigator.onLine) return setStatus('Sin señal · reconectando', 'bad');
     if (data.meta && data.meta.fromCache) return setStatus('Conectando…', 'warn');
-    setStatus('En vivo', 'ok');
+    const st = data.race ? raceStatus(data.race) : '';
+    setStatus(st === 'en_curso' ? 'En vivo' : (RSTATUS[st] || 'En vivo'), st === 'en_curso' ? 'ok' : '');
   }
   window.addEventListener('online', renderStatus); window.addEventListener('offline', renderStatus);
 
-  S.watch(d => { if (d.error) return; data = Object.assign({ participants: [] }, d); lastUpdate = Date.now(); render(); });
+  // ---------- Lista de raids ----------
+  S.watchClubs(list => { clubs = {}; list.forEach(c => { clubs[c.id] = c; }); renderHome(); if (current) render(); });
+  S.watchRaces(list => { races = list; renderHome(); });
+  function renderHome() {
+    const byStatus = { en_curso: [], proximo: [], terminado: [] };
+    sortRaces(races).forEach(r => byStatus[raceStatus(r)].push(r));
+    const titles = { en_curso: 'En curso', proximo: 'Próximos', terminado: 'Terminados' };
+    let h = '';
+    Object.keys(byStatus).forEach(k => {
+      if (!byStatus[k].length) return;
+      h += '<div class="rsec ' + k + '"><h2><span class="dot"></span>' + titles[k] + '</h2><div class="rcards">';
+      byStatus[k].forEach(r => {
+        const c = clubs[r.clubId];
+        h += '<a class="rcard" href="#' + encodeURIComponent(r.id) + '">' + logoHTML(c, 48) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(c ? c.name : 'Sin club') + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + (k === 'en_curso' ? '<br><span class="badge en_curso">En vivo</span>' : '') + '</span></a>';
+      });
+      h += '</div></div>';
+    });
+    $('races').innerHTML = h || '<div class="table"><div class="empty-list">Todavía no hay raids publicados.</div></div>';
+  }
+
+  // ---------- Navegación: #id del raid ----------
+  function route() {
+    const id = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (id && id !== current) open(id);
+    else if (!id) close();
+  }
+  function open(id) {
+    if (unwatch) unwatch();
+    current = id; data = { race: null, arrivals: [], participants: [], meta: { fromCache: true } };
+    seenGroups = new Set(); firstRender = true; lastUpdate = null;
+    $('home').hidden = true; $('home').style.display = 'none';
+    $('raid').hidden = false; $('raid').style.display = 'flex';
+    unwatch = S.watch(id, d => { if (d.error) return; data = Object.assign({ participants: [] }, d); lastUpdate = Date.now(); render(); });
+    window.scrollTo(0, 0);
+  }
+  function close() {
+    if (unwatch) unwatch(); unwatch = null; current = null;
+    $('raid').hidden = true; $('raid').style.display = 'none';
+    $('home').hidden = false; $('home').style.display = 'flex';
+    document.title = (INFO.title || 'Raids') + ' · En vivo';
+  }
+  window.addEventListener('hashchange', route);
+  $('back').addEventListener('click', () => { history.pushState('', '', location.pathname); close(); });
+  $('share').addEventListener('click', () => {
+    const url = location.origin + location.pathname + '#' + encodeURIComponent(current);
+    const ok = () => { $('share-msg').textContent = 'Link copiado: ' + url; };
+    try { navigator.clipboard.writeText(url).then(ok, () => { $('share-msg').textContent = url; }); } catch (e) { $('share-msg').textContent = url; }
+  });
 
   function setView(v) {
     ['lleg', 'larg'].forEach(k => {
@@ -27,13 +79,18 @@
   }
   ['lleg', 'larg'].forEach(k => $('tab-' + k).addEventListener('click', () => setView(k)));
   try { const v = localStorage.getItem('raid-panel-tab'); if (v === 'larg') setView('larg'); } catch (e) {}
-  if (location.hash === '#largada') setView('larg');
 
+  // ---------- Un raid ----------
   function render() {
     renderStatus();
-    const race = data.race || {}, gs = groups(data.arrivals);
-    $('race-name').textContent = race.name || (data.raceId ? 'Raid' : 'Sin carrera activa');
-    document.title = (race.name || 'Raid') + ' · Panel en vivo';
+    const race = data.race, gs = groups(data.arrivals);
+    if (!race && !data.meta.fromCache) { $('race-name').textContent = 'Raid no encontrado'; $('race-sub').textContent = 'Puede que lo hayan borrado. Volvé a la lista de raids.'; $('race-logo').innerHTML = ''; }
+    if (!race) return;
+    const c = clubs[race.clubId];
+    $('race-logo').innerHTML = logoHTML(c, 56);
+    $('race-name').textContent = race.name || 'Raid';
+    $('race-sub').textContent = (c ? c.name + ' · ' : '') + fmtDate(race.date);
+    document.title = (race.name || 'Raid') + ' · En vivo';
     const n = data.arrivals.length, conNum = data.arrivals.filter(a => a.num).length;
     const P = pMap(data.participants), parts = (data.participants || []).slice().sort(byNum);
     const arrived = new Set(data.arrivals.map(a => a.num).filter(Boolean));
@@ -47,16 +104,14 @@
     $('fuera-wrap').hidden = !fuera.length;
     $('fuera').innerHTML = fuera.map(p => '<span class="pn num ' + (statusOf(p) === 'abandono' ? 'ab' : 'rt') + '">' + esc(p.num) + '<small>' + STATUS[statusOf(p)] + (pShort(p) ? ' · ' + esc(pShort(p)) : '') + '</small></span>').join('');
 
-    // Última llegada
     const lg = gs[gs.length - 1];
     if (lg) {
       $('last').hidden = false;
       $('last').innerHTML = '<span class="lbl">Última llegada · Grupo ' + gs.length + '</span><span class="nums num">' + lg.horses.map(a => esc(a.num) || '?').join(' · ') + (lg.horses.length === 1 && P[lg.horses[0].num] ? '</span><span class="meta">' + esc(pName(P[lg.horses[0].num])) : '') + '</span><span class="meta num">' + hms(lg.t) + (gs.length > 1 ? ' · +' + dur(lg.t - gs[0].t) + ' del 1°' : ' · primero') + '</span>';
     } else $('last').hidden = true;
 
-    // Grupos
     let h = '', pos = 0;
-    if (!gs.length) h = '<div class="table"><div class="empty-list">Todavía no llegó ningún caballo.</div></div>';
+    if (!gs.length) h = '<div class="table"><div class="empty-list">' + (raceStatus(race) === 'proximo' ? 'El raid todavía no empezó. ' + esc(fmtDate(race.date)) + '.' : 'Todavía no llegó ningún caballo.') + '</div></div>';
     gs.forEach((g, i) => {
       const fresh = !firstRender && !seenGroups.has(g.t);
       seenGroups.add(g.t);
@@ -92,7 +147,9 @@
   }
 
   setInterval(() => {
+    if (!current) return;
     if (lastUpdate) $('updated').textContent = 'Actualizado ' + hms(lastUpdate);
     if (data.race && data.race.start1) renderStart();
   }, 1000);
+  route();
 })();

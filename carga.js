@@ -1,6 +1,6 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap } = window.R;
+  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML } = window.R;
   let data = { raceId: null, race: null, arrivals: [], participants: [], meta: {} };
   let buf = '', sel = null, view = 'lleg', online = navigator.onLine;
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -12,23 +12,67 @@
   if (S.mode === 'nosdk') { $('nosdk-banner').hidden = false; setStatus('Sin conexión', 'bad'); return; }
 
   // ---------- Ingreso ----------
-  S.onAuth(u => {
-    $('login').hidden = !!u; $('app').hidden = !u;
-    if (u) { $('who').textContent = 'Conectado como ' + (u.email || ''); start(); }
+  let acc = { admin: false, clubs: [] }, races = [], clubs = {}, raceSel = null, unwatch = null, ticking = false, listening = false;
+  function show(id) {
+    ['login', 'pick', 'app'].forEach(k => { $(k).hidden = k !== id; if (k !== 'login') $(k).style.display = k === id ? 'flex' : 'none'; });
+  }
+  S.onAuth(async u => {
+    if (!u) { if (unwatch) unwatch(); unwatch = null; raceSel = null; show('login'); return; }
+    $('who').textContent = 'Conectado como ' + (u.email || '');
+    $('pick-list').innerHTML = '<div class="table"><div class="empty-list">Cargando raids…</div></div>';
+    show('pick');
+    acc = await S.access();
+    $('pick-admin').hidden = !acc.admin; $('admin-link').hidden = !acc.admin;
+    $('pick-who').textContent = (u.email || '') + (acc.admin ? ' · Administrador FEU (todos los clubes)' : (acc.clubs.length ? '' : ''));
+    if (!listening) {
+      listening = true;
+      S.watchClubs(list => { clubs = {}; list.forEach(c => { clubs[c.id] = c; }); renderPick(); if (raceSel) render(); });
+      S.watchRaces(list => { races = list; renderPick(); if (raceSel) render(); });
+    }
+    const saved = lsGet('raid-sel');
+    if (saved) choose(saved); else renderPick();
   });
   $('login-form').addEventListener('submit', e => {
     e.preventDefault(); $('login-msg').textContent = 'Entrando…'; $('login-msg').className = 'msg';
     S.signIn($('email').value.trim(), $('pass').value).then(() => { $('login-msg').textContent = ''; })
       .catch(() => { $('login-msg').textContent = 'No se pudo entrar: revisá el correo y la contraseña.' + (navigator.onLine ? '' : ' Necesitás señal para el primer ingreso.'); $('login-msg').className = 'msg warn'; });
   });
-  $('logout').addEventListener('click', () => S.signOut());
-  S.onError(e => { msg((e && e.code === 'permission-denied') ? 'Tu usuario no tiene permiso para cargar datos. Pedile al organizador que te habilite.' : 'Error al guardar: ' + ((e && e.message) || e), true); });
+  $('forgot').addEventListener('click', () => {
+    const e = $('email').value.trim();
+    if (!e) { $('login-msg').textContent = 'Escribí tu correo arriba y tocá de nuevo "Olvidé mi contraseña".'; $('login-msg').className = 'msg warn'; return; }
+    S.resetPassword(e).then(() => { $('login-msg').textContent = 'Te mandamos un correo a ' + e + ' para elegir una contraseña nueva. Revisá también el correo no deseado.'; $('login-msg').className = 'msg'; })
+      .catch(() => { $('login-msg').textContent = 'No se pudo enviar el correo. Revisá que esté bien escrito.'; $('login-msg').className = 'msg warn'; });
+  });
+  $('logout').addEventListener('click', () => { lsSet('raid-sel', ''); S.signOut(); });
+  $('pick-logout').addEventListener('click', () => { lsSet('raid-sel', ''); S.signOut(); });
+  S.onError(e => { msg((e && e.code === 'permission-denied') ? 'Tu usuario no tiene permiso para cargar en este raid. Pedile a la FEU que te habilite para este club.' : 'Error al guardar: ' + ((e && e.message) || e), true); });
 
-  let started = false;
-  function start() {
-    if (started) return; started = true;
-    S.watch(d => { if (d.error) return; data = Object.assign({ participants: [] }, d); render(); });
-    setInterval(tick, 250); tick();
+  // ---------- Elegir raid ----------
+  const allowed = r => acc.admin || (r && acc.clubs.includes(r.clubId));
+  function renderPick() {
+    const mine = sortRaces(races.filter(allowed));
+    const titles = { en_curso: 'En curso', proximo: 'Próximos', terminado: 'Terminados' };
+    let h = '';
+    ['en_curso', 'proximo', 'terminado'].forEach(k => {
+      const l = mine.filter(r => raceStatus(r) === k); if (!l.length) return;
+      h += '<div class="rsec ' + k + '"><h2><span class="dot"></span>' + titles[k] + '</h2><div class="rcards">';
+      l.forEach(r => { const c = clubs[r.clubId];
+        h += '<button class="rcard' + (r.id === raceSel ? ' sel' : '') + '" data-race="' + esc(r.id) + '">' + logoHTML(c, 44) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(c ? c.name : 'Sin club') + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + '</span></button>'; });
+      h += '</div></div>';
+    });
+    if (!h) h = '<div class="card"><p>' + (acc.admin ? 'Todavía no hay raids. Crealos en <b>Administración</b>.' : (acc.clubs.length ? 'Tu club todavía no tiene raids cargados. Los crea la FEU.' : (acc.offline ? 'Sin señal: no se pudo comprobar tu usuario. Probá de nuevo con conexión.' : 'Tu usuario todavía no está asignado a ningún club. Pedile a la FEU que te habilite.'))) + '</p></div>';
+    $('pick-list').innerHTML = h;
+  }
+  $('pick-list').addEventListener('click', e => { const b = e.target.closest('[data-race]'); if (b) choose(b.dataset.race); });
+  $('change-raid').addEventListener('click', () => { if (unwatch) unwatch(); unwatch = null; raceSel = null; lsSet('raid-sel', ''); renderPick(); show('pick'); });
+  function choose(id) {
+    if (unwatch) unwatch();
+    raceSel = id; lsSet('raid-sel', id);
+    data = { raceId: id, race: null, arrivals: [], participants: [], meta: { fromCache: true } };
+    sel = null; buf = ''; msg('');
+    unwatch = S.watch(id, d => { if (d.error) return; data = Object.assign({ participants: [] }, d); render(); });
+    show('app'); setView('lleg');
+    if (!ticking) { ticking = true; setInterval(tick, 250); tick(); }
   }
 
   // ---------- Estado de conexión ----------
@@ -85,7 +129,7 @@
     if (rol === 'planillero') return;
     keepAwake();
     const t = sec(S.now());
-    if (!data.raceId) { msg('No hay carrera activa. Creala en la pestaña Carrera.', true); return; }
+    if (!data.race) { msg('Esperando los datos del raid…', true); return; }
     if (buf && rol === 'completo' && !pending().length && !validSel()) {
       const c = check(buf, null); msg(c.text, c.warn);
       S.add(t, buf); buf = '';
@@ -208,7 +252,7 @@
   });
   async function doImport(replace) {
     if (!parsed || !parsed.list.length) return;
-    if (!data.raceId) { $('pmsg').textContent = 'Primero creá la carrera en la pestaña Carrera.'; $('pmsg').className = 'msg warn'; return; }
+    if (!data.raceId) { $('pmsg').textContent = 'Elegí un raid primero.'; $('pmsg').className = 'msg warn'; return; }
     $('pmsg').textContent = 'Guardando…'; $('pmsg').className = 'msg';
     try {
       await S.importParticipants(parsed.list, replace);
@@ -257,10 +301,7 @@
 
   // ---------- Carrera ----------
   $('start1').addEventListener('change', e => S.setRace({ start1: e.target.value }));
-  $('race-input').addEventListener('change', e => S.setRace({ name: e.target.value.trim() }));
-  $('new-race').addEventListener('click', () => { $('new-confirm').hidden = false; });
-  $('new-no').addEventListener('click', () => { $('new-confirm').hidden = true; });
-  $('new-yes').addEventListener('click', () => { S.newRace($('new-name').value.trim() || 'Raid'); $('new-name').value = ''; $('new-confirm').hidden = true; sel = null; buf = ''; setView('lleg'); });
+  $('race-status').addEventListener('change', e => S.setRace({ status: e.target.value }));
   $('copy').addEventListener('click', () => {
     const txt = sheet(data.arrivals, data.race && data.race.start1, parts()), box = $('copybox');
     const fb = () => { box.hidden = false; box.value = txt; box.select(); $('msg2').textContent = 'Seleccioná el texto y copialo.'; };
@@ -281,10 +322,17 @@
   function render() {
     validSel(); renderStatus();
     const race = data.race || {}, gs = groups(data.arrivals), pend = pending(), t = target(), P = pm();
-    $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>Cronometristas · llegadas 1ª etapa</small>';
-    $('norace').hidden = !!data.raceId;
-    $('mark').disabled = !data.raceId;
-    if (document.activeElement !== $('race-input')) $('race-input').value = race.name || '';
+    const club = clubs[race.clubId], gone = !data.race && !data.meta.fromCache;
+    $('race-logo').innerHTML = data.race ? logoHTML(club, 36) : '';
+    $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>' + esc(club ? club.name : 'Cronometristas') + ' · ' + esc(fmtDate(race.date)) + '</small>';
+    $('norace').hidden = !gone;
+    $('done-banner').hidden = !(data.race && raceStatus(data.race) === 'terminado');
+    $('mark').disabled = gone;
+    $('carr-logo').innerHTML = logoHTML(club, 48);
+    $('carr-name').textContent = race.name || 'Raid';
+    $('carr-sub').textContent = (club ? club.name + ' · ' : '') + fmtDate(race.date) + ' · ' + RSTATUS[raceStatus(race)];
+    if (document.activeElement !== $('race-status')) $('race-status').value = RSTATUS[race.status] ? race.status : '';
+    $('public-link').href = 'index.html#' + encodeURIComponent(data.raceId || '');
     if (document.activeElement !== $('start1')) $('start1').value = race.start1 || '';
     $('buf').textContent = buf || '000'; $('buf').classList.toggle('empty', !buf);
 
