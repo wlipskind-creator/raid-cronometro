@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Raid · Instructivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+<style>
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:2.2em 1fr;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;line-height:1.45;font-size:15px}
+.steps li::before{content:counter(s);font-family:var(--display);font-weight:700;font-size:24px;line-height:1;color:var(--accent)}
+.steps b{font-weight:600}
+.k{display:inline-block;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.03em;text-transform:uppercase;padding:1px 8px;border-radius:6px;background:var(--accent);color:var(--accent-ink)}
+.k.o{background:var(--surface);color:var(--accent);border:1.5px solid var(--accent)}
+.k.y{background:var(--pend-bg);color:var(--pend);border:1px solid var(--pend)}
+ul.tips{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Raid · Instructivo<small>Para cronometristas · 1 minuto de lectura</small></div>
+    <a class="ghost" href="carga.html" style="text-decoration:none">Ir a la app</a>
+  </header>
+
+  <h2>Cuando llegan los caballos</h2>
+  <ol class="steps">
+    <li><span>Cuando un caballo cruza, tocá <span class="k">Llegó</span>. <b>Un toque por caballo.</b> La hora se guarda al segundo en ese momento. Si llegan 10 juntos, tocás 10 veces.</span></li>
+    <li><span>Si cruzaron juntos y no llegaste a tocar a tiempo, usá <span class="k o">+ Otro caballo, mismo tiempo</span>. Suma un caballo al último grupo con la misma hora.</span></li>
+    <li><span>Después, con calma, escribí el <b>número</b> de cada caballo y tocá <b>OK</b>. Va a la primera ficha amarilla <span class="k y">?</span>, en el orden en que llegaron.</span></li>
+    <li><span>Si ya sabés el número antes de que cruce, escribilo y tocá <span class="k">Llegó</span> justo cuando pasa. Queda anotado en un solo paso.</span></li>
+  </ol>
+
+  <h2>Para corregir</h2>
+  <ul class="tips">
+    <li><b>Número equivocado:</b> tocá la ficha del caballo, escribí el número correcto y tocá OK.</li>
+    <li><b>Caballo de más:</b> tocá su ficha y elegí <b>Quitar caballo</b>, o usá <b>Deshacer mi último</b>.</li>
+    <li><b>Hora equivocada de un grupo:</b> tocá el título del grupo (ej. "Grupo 3") y corregí la hora.</li>
+    <li><b>Faltó un caballo en un grupo:</b> tocá el <b>+</b> de ese grupo, escribí el número y tocá OK.</li>
+  </ul>
+
+  <h2>Importante</h2>
+  <ul class="tips">
+    <li><b>Una sola persona toca LLEGÓ.</b> Los demás ayudan cargando números. Si dos personas marcan el mismo caballo, aparece dos veces.</li>
+    <li><b>Sin señal no pasa nada:</b> seguí cargando. Arriba dice "pendiente de enviar" y se envía solo al volver la conexión.</li>
+    <li>Antes de salir al campo, abrí la app una vez <b>con señal</b> y usá "Agregar a pantalla de inicio".</li>
+    <li>La pestaña <b>Largada 2ª</b> calcula la hora de largada de cada caballo con la misma diferencia con que llegó.</li>
+  </ul>
+
+  <div class="banner" id="prueba" hidden><b>Versión de prueba:</b> por ahora cada teléfono guarda sus propios datos y no se comparten. Probá sin miedo: en <b>Carrera → Empezar carrera nueva</b> arrancás con la lista vacía.</div>
+</div>
+<script src="config.js"></script>
+<script>var c=window.FIREBASE_CONFIG||{};if(!c.apiKey||c.apiKey==="PEGAR_AQUI")document.getElementById("prueba").hidden=false;</script>
+</body>
+</html>

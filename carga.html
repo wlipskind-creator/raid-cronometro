@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D6A43">
+<title>Raid · Cronometristas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand" id="race-name">Raid<small>Cronometristas · llegadas 1ª etapa</small></div>
+    <span class="pill" id="status">Conectando…</span>
+  </header>
+
+  <div class="banner" id="demo-banner" hidden><b>Modo demostración.</b> Los datos quedan solo en este navegador y no se comparten. Para usarla en serio, configurá Firebase (ver INSTALAR).</div>
+  <div class="banner" id="nosdk-banner" hidden><b>No se pudo conectar.</b> Abrí esta página una vez con internet para que quede guardada en el teléfono.</div>
+
+  <!-- INGRESO -->
+  <section id="login" class="card" hidden>
+    <h2>Ingreso de cronometristas</h2>
+    <p>Usá el correo y la contraseña que te dio el organizador.</p>
+    <form id="login-form" class="card" style="padding:0;border:0">
+      <div class="field"><label for="email">Correo</label><input id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="pass">Contraseña</label><input id="pass" type="password" autocomplete="current-password" required></div>
+      <div class="actions"><button class="primary" type="submit">Entrar</button></div>
+      <div class="msg" id="login-msg"></div>
+    </form>
+  </section>
+
+  <!-- APP -->
+  <div id="app" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div class="tabs" role="tablist">
+      <button id="tab-lleg" role="tab" aria-selected="true">Llegadas</button>
+      <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª</button>
+      <button id="tab-carr" role="tab" aria-selected="false">Carrera</button>
+    </div>
+
+    <div class="banner" id="norace" hidden>No hay una carrera activa. Creala en la pestaña <b>Carrera</b>.</div>
+
+    <!-- LLEGADAS -->
+    <section id="view-lleg" style="display:flex;flex-direction:column;gap:14px">
+      <div class="clockrow">
+        <div><div class="clocklbl" id="clocklbl">Hora</div><div class="clock num" id="clock">--:--:--</div></div>
+        <div class="elapsed"><div class="clocklbl">Desde el 1°</div><div class="v num" id="since">—</div></div>
+      </div>
+      <button class="mark" id="mark">Llegó<span class="sub" id="mark-sub">Tocá una vez por cada caballo que cruza</span></button>
+      <button class="same" id="same">+ Otro caballo, mismo tiempo<span class="sub" id="same-sub">Suma un caballo al último grupo</span></button>
+      <div class="entry">
+        <div class="entryhead"><div class="target" id="target">—</div><div class="buf empty num" id="buf">000</div></div>
+        <div class="pad" id="pad">
+          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+          <button data-k="del" aria-label="Borrar dígito">⌫</button><button data-k="0">0</button><button data-k="ok" class="ok">OK</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+      <div class="listhead">
+        <h2>Orden de llegada</h2>
+        <div class="actions"><span class="count" id="count"></span><button class="ghost" id="undo">Deshacer mi último</button></div>
+      </div>
+      <div class="groups" id="list"></div>
+    </section>
+
+    <!-- LARGADA -->
+    <section id="view-larg" hidden style="flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>Largada 2ª etapa</h2>
+        <p>Cada caballo larga con la diferencia con que llegó detrás del primero. Los de un mismo grupo largan juntos.</p>
+        <div class="field"><label for="start1">Hora de largada del 1°</label><input id="start1" type="time" step="1" class="num"></div>
+      </div>
+      <div class="table" id="startlist"></div>
+    </section>
+
+    <!-- CARRERA -->
+    <section id="view-carr" hidden style="flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>Carrera activa</h2>
+        <div class="field"><label for="race-input">Nombre</label><input id="race-input" type="text" placeholder="Ej.: Raid Federado 80 km"></div>
+        <div class="actions"><button class="ghost" id="copy">Copiar planilla</button><a class="ghost" href="index.html" target="_blank" rel="noopener" style="text-decoration:none">Abrir panel público</a></div>
+        <textarea class="copybox" id="copybox" readonly hidden></textarea>
+        <div class="msg" id="msg2"></div>
+      </div>
+      <div class="card">
+        <h2>Nueva carrera</h2>
+        <p>Deja guardada la carrera actual y empieza una lista vacía. El panel público pasa a mostrar la nueva.</p>
+        <div class="field"><label for="new-name">Nombre de la nueva carrera</label><input id="new-name" type="text"></div>
+        <div class="actions"><button class="ghost danger" id="new-race">Empezar carrera nueva</button></div>
+        <div class="actions" id="new-confirm" hidden><span style="font-size:14px">¿Seguro? Todos los cronometristas pasan a la nueva.</span><button class="ghost danger" id="new-yes">Sí, empezar</button><button class="ghost" id="new-no">Cancelar</button></div>
+      </div>
+      <div class="card">
+        <p id="who"></p>
+        <p id="clockinfo"></p>
+        <div class="actions"><button class="ghost" id="logout">Salir</button></div>
+      </div>
+    </section>
+  </div>
+  <p class="foot">Los tiempos se registran al segundo. Si se corta la señal, seguí cargando: se guarda en el teléfono y se envía solo al volver la conexión. <a href="ayuda.html">Instructivo</a> · <a href="index.html">Panel público</a></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="util.js"></script>
+<script src="store.js"></script>
+<script src="carga.js"></script>
+</body>
+</html>

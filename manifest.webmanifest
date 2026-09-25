@@ -1,0 +1,9 @@
+{
+  "name": "Raid · Cronometraje",
+  "short_name": "Raid",
+  "start_url": "carga.html",
+  "display": "standalone",
+  "background_color": "#EBEFEC",
+  "theme_color": "#1D6A43",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

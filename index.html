@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D6A43">
+<title>Raid · Panel en vivo</title>
+<meta name="description" content="Llegadas de la 1ª etapa y largada de la 2ª etapa, en vivo.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap wide">
+  <div class="p-head">
+    <div>
+      <div class="p-title" id="race-name">Raid</div>
+      <div class="p-sub">Neutralización · llegadas de la 1ª etapa y largada de la 2ª</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="pill" id="status">Conectando…</span>
+      <span class="p-sub num" id="updated"></span>
+    </div>
+  </div>
+
+  <div class="banner" id="demo-banner" hidden><b>Modo demostración.</b> Este panel muestra datos de ejemplo guardados en este navegador.</div>
+  <div class="banner" id="nosdk-banner" hidden><b>Sin conexión.</b> Revisá internet y recargá la página.</div>
+
+  <div class="p-strip" id="strip"></div>
+
+  <div class="tabs" role="tablist" style="align-self:flex-start">
+    <button id="tab-lleg" role="tab" aria-selected="true">Llegadas 1ª etapa</button>
+    <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª etapa</button>
+  </div>
+
+  <section id="view-lleg" style="display:flex;flex-direction:column;gap:10px">
+    <div class="last" id="last" hidden></div>
+    <div class="pgrid groups" id="list"></div>
+  </section>
+
+  <section id="view-larg" hidden style="flex-direction:column;gap:10px">
+    <div class="nextcard" id="next" hidden></div>
+    <p class="foot" id="larg-note"></p>
+    <div class="table" id="startlist"></div>
+  </section>
+
+  <p class="foot">Se actualiza solo, no hace falta recargar. <a href="carga.html">Ingreso de cronometristas</a></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script src="util.js"></script>
+<script src="store.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

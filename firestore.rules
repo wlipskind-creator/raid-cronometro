@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cronometristas habilitados para cargar datos.
+    // Reemplazá estos correos por los de tu equipo (entre comillas, separados por coma).
+    function esCronometrista() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'cronometrista1@ejemplo.com',
+          'cronometrista2@ejemplo.com'
+        ];
+    }
+
+    // Carrera activa: todos la ven, solo cronometristas la cambian.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if esCronometrista();
+    }
+
+    // Carreras y llegadas: el público lee, los cronometristas escriben.
+    match /races/{raceId} {
+      allow read: if true;
+      allow write: if esCronometrista();
+
+      match /arrivals/{arrivalId} {
+        allow read: if true;
+        allow create, update: if esCronometrista()
+          && request.resource.data.t is number
+          && request.resource.data.num is string
+          && request.resource.data.num.size() <= 6;
+        allow delete: if esCronometrista();
+      }
+    }
+
+    // Sincronización del reloj de cada cronometrista.
+    match /ping/{uid} {
+      allow read, write: if esCronometrista() && request.auth.uid == uid;
+    }
+  }
+}

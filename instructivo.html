@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Instructivo del Raid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#E4EAE6; --slide:#FFFFFF; --soft:#F2F5F3; --ink:#13201A; --muted:#5B6B62; --line:#D3DBD6;
+  --accent:#1D6A43; --accent-ink:#FFFFFF; --pend:#B87900; --pend-bg:#FFF3D6; --sel:#D9EDE2; --danger:#B3261E;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A0F0C; --slide:#141C18; --soft:#1C2620; --ink:#E7EFEA; --muted:#93A59B; --line:#2C3A32;
+    --accent:#3FB97C; --accent-ink:#06130C; --pend:#F2B53A; --pend-bg:#3A2D0E; --sel:#1F3A2B; --danger:#FF7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A0F0C; --slide:#141C18; --soft:#1C2620; --ink:#E7EFEA; --muted:#93A59B; --line:#2C3A32;
+  --accent:#3FB97C; --accent-ink:#06130C; --pend:#F2B53A; --pend-bg:#3A2D0E; --sel:#1F3A2B; --danger:#FF7A6E;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+.deck{height:100%;display:flex;flex-direction:column;padding:12px 16px;gap:10px;max-width:1100px;margin:0 auto}
+.stage{flex:1;position:relative;min-height:0}
+.slide{position:absolute;inset:0;background:var(--slide);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,4vw,44px);display:flex;flex-direction:column;gap:clamp(12px,2.2vh,22px);overflow-y:auto;opacity:0;transform:translateX(24px);transition:opacity .28s ease,transform .28s ease;pointer-events:none}
+.slide.on{opacity:1;transform:none;pointer-events:auto}
+.slide.back{transform:translateX(-24px)}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1,h2{font-family:var(--display);font-weight:700;text-transform:uppercase;margin:0;line-height:1;letter-spacing:.01em;text-wrap:balance}
+h1{font-size:clamp(30px,8.4vw,88px);overflow-wrap:anywhere}
+h2{font-size:clamp(30px,6.4vw,56px)}
+.lead{font-size:clamp(17px,2.4vw,22px);line-height:1.4;color:var(--muted);margin:0;max-width:40ch}
+.lead b{color:var(--ink);font-weight:600}
+.cols{display:grid;grid-template-columns:1fr;gap:clamp(14px,3vw,36px);align-items:center;flex:1}
+@media (min-width:760px){.cols{grid-template-columns:1.05fr 1fr}}
+.mock{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;max-width:420px;width:100%;justify-self:center}
+
+/* piezas de la app */
+.m-mark{border-radius:14px;background:var(--accent);color:var(--accent-ink);padding:16px 10px;text-align:center;font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.04em;text-transform:uppercase;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.m-mark small{display:block;font-family:var(--body);font-weight:500;font-size:13px;letter-spacing:0;text-transform:none;opacity:.9}
+.m-same{border:2px solid var(--accent);background:var(--slide);color:var(--accent);border-radius:12px;padding:10px;text-align:center;font-family:var(--display);font-weight:700;font-size:18px;text-transform:uppercase}
+.m-same small{display:block;font-family:var(--body);font-weight:500;font-size:12px;text-transform:none;color:var(--muted)}
+.m-grp{background:var(--slide);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.m-gh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;background:var(--soft);padding:7px 12px;font-size:14px}
+.m-gh b{font-family:var(--display);font-size:17px;text-transform:uppercase}
+.m-gh .d{font-weight:600}
+.m-chips{display:flex;flex-wrap:wrap;gap:6px;padding:9px 12px}
+.m-chip{min-width:2.8em;text-align:center;border:1px solid var(--line);border-radius:9px;padding:4px 8px;font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;background:var(--slide)}
+.m-chip small{display:block;font-family:var(--body);font-weight:500;font-size:10px;color:var(--muted)}
+.m-chip.p{background:var(--pend-bg);border-color:var(--pend);color:var(--pend)}
+.m-chip.s{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);background:var(--sel);color:var(--ink)}
+.m-chip.a{border-style:dashed;color:var(--muted);font-size:18px}
+.m-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.m-pad span{border:1px solid var(--line);background:var(--slide);border-radius:8px;padding:7px 0;text-align:center;font-family:var(--display);font-weight:600;font-size:20px}
+.m-pad .ok{background:var(--ink);color:var(--slide);border-color:var(--ink)}
+.m-pad .hit{background:var(--sel);border-color:var(--accent)}
+.m-buf{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.m-buf b{font-family:var(--display);font-size:32px;color:var(--ink)}
+.tag{display:inline-block;font-family:var(--display);font-weight:700;font-size:.95em;letter-spacing:.03em;text-transform:uppercase;padding:0 7px;border-radius:6px;background:var(--accent);color:var(--accent-ink)}
+.tag.o{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.tag.y{background:var(--pend-bg);color:var(--pend);border:1px solid var(--pend)}
+
+/* idea central */
+.flow{display:grid;grid-template-columns:1fr;gap:12px;flex:1;align-content:center}
+@media (min-width:760px){.flow{grid-template-columns:1fr auto 1fr}}
+.fstep{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.fstep .when{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.fstep .what{font-family:var(--display);font-weight:700;font-size:clamp(26px,4.4vw,40px);text-transform:uppercase;line-height:1}
+.fstep p{margin:0;font-size:16px;line-height:1.4;color:var(--muted)}
+.arrow{align-self:center;justify-self:center;font-family:var(--display);font-size:40px;color:var(--accent);line-height:1}
+@media (max-width:759px){.arrow{transform:rotate(90deg)}}
+
+/* listas */
+.list{display:grid;grid-template-columns:1fr;gap:10px;margin:0;padding:0;list-style:none}
+@media (min-width:760px){.list.two{grid-template-columns:1fr 1fr}}
+.list li{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:clamp(15px,2vw,18px);line-height:1.4}
+.list li b{display:block;font-family:var(--display);font-weight:700;font-size:1.25em;text-transform:uppercase;letter-spacing:.02em;margin-bottom:2px}
+.list li.key{background:var(--sel);border-color:var(--accent)}
+
+/* tabla largada */
+.tbl{width:100%;border-collapse:collapse;font-size:clamp(15px,2vw,18px);background:var(--soft);border-radius:12px;overflow:hidden}
+.tbl th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;background:var(--slide);border-bottom:1px solid var(--line)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--line)}
+.tbl td.n{font-family:var(--display);font-weight:700;font-size:1.35em}
+.tbl td.h{font-family:var(--display);font-weight:700;font-size:1.3em;color:var(--accent)}
+.tbl tr.same td{background:var(--sel)}
+
+/* portada y cierre */
+.cover{justify-content:center;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cover .eyebrow,.cover .lead{color:var(--accent-ink);opacity:.85}
+.cover .lead b{color:var(--accent-ink)}
+.stopwatch{width:clamp(64px,12vw,110px);height:auto}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:1px solid currentColor;border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600;opacity:.9}
+
+/* navegación */
+.nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav button{border:1px solid var(--line);background:var(--slide);border-radius:12px;padding:10px 14px;font-weight:600;font-size:15px;white-space:nowrap}
+.nav button.next{background:var(--ink);color:var(--slide);border-color:var(--ink)}
+.nav button:disabled{opacity:.35;cursor:default}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.dots button{width:7px;height:7px;min-width:0;padding:0;border-radius:50%;border:0;background:var(--line)}
+.dots button[aria-current="true"]{background:var(--accent);width:18px;border-radius:5px}
+.count{font-size:13px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.slide{transition:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="stage" id="stage">
+
+    <!-- 1 -->
+    <section class="slide cover on" aria-label="Portada">
+      <svg class="stopwatch" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="56" r="34" fill="none" stroke="currentColor" stroke-width="7"/><rect x="42" y="8" width="16" height="10" rx="3" fill="currentColor"/><path d="M50 56V36M50 56l13 9" stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none"/></svg>
+      <div class="eyebrow">Para cronometristas</div>
+      <h1>Cronometraje<br>del Raid</h1>
+      <p class="lead">Cómo registrar las llegadas de la <b>1ª etapa</b> y armar la <b>largada de la 2ª</b> desde el celular.</p>
+      <div class="pillrow"><span class="pill">3 minutos</span><span class="pill">Deslizá para avanzar →</span></div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide" aria-label="La idea">
+      <div class="eyebrow">La idea</div>
+      <h2>Primero la hora,<br>después el número</h2>
+      <p class="lead">Cuando llegan muchos juntos no hay tiempo para teclear. Por eso la app separa los dos pasos.</p>
+      <div class="flow">
+        <div class="fstep"><span class="when">Cuando cruzan</span><span class="what">Tocás LLEGÓ</span><p>Un toque por caballo. La hora queda guardada al segundo.</p></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="fstep"><span class="when">Con calma, después</span><span class="what">Cargás los números</span><p>Escribís cada número y tocás OK. Se asignan en el orden en que llegaron.</p></div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" aria-label="Paso 1">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Paso 1</div>
+          <h2>Tocá LLEGÓ</h2>
+          <p class="lead"><b>Un toque por cada caballo</b> que cruza la línea. Si llegan 10 juntos, son 10 toques.</p>
+          <p class="lead">Los que cruzan en el <b>mismo segundo</b> quedan juntos en un <b>grupo</b>.</p>
+        </div>
+        <div class="mock">
+          <div class="m-mark">Llegó<small>3 caballos sin número</small></div>
+          <div class="m-grp"><div class="m-gh"><b>Grupo 5</b><span class="num">11:43:52 · 3 cab.</span><span class="d num">+1:35</span></div>
+            <div class="m-chips"><span class="m-chip p">?<small>7°</small></span><span class="m-chip p">?<small>8°</small></span><span class="m-chip p">?<small>9°</small></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" aria-label="Paso 2">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Paso 2 · si hace falta</div>
+          <h2>Llegaron juntos y no alcancé</h2>
+          <p class="lead">Si cruzaron a la par pero tu segundo toque cayó un segundo tarde, usá <span class="tag o">+ Otro caballo, mismo tiempo</span>.</p>
+          <p class="lead">Suma un caballo al <b>último grupo</b>, con la misma hora.</p>
+        </div>
+        <div class="mock">
+          <div class="m-same">+ Otro caballo, mismo tiempo<small>Suma un caballo al Grupo 5 (11:43:52)</small></div>
+          <div class="m-grp"><div class="m-gh"><b>Grupo 5</b><span class="num">11:43:52 · 4 cab.</span><span class="d num">+1:35</span></div>
+            <div class="m-chips"><span class="m-chip p">?<small>7°</small></span><span class="m-chip p">?<small>8°</small></span><span class="m-chip p">?<small>9°</small></span><span class="m-chip p s">?<small>10°</small></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" aria-label="Paso 3">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Paso 3</div>
+          <h2>Cargá los números</h2>
+          <p class="lead">Escribí el número del caballo y tocá <b>OK</b>. Va a la primera ficha amarilla <span class="tag y">?</span>.</p>
+          <p class="lead">Seguí con el siguiente, <b>en el orden en que llegaron</b>.</p>
+        </div>
+        <div class="mock">
+          <div class="m-grp"><div class="m-gh"><b>Grupo 5</b><span class="num">11:43:52</span><span class="d num">+1:35</span></div>
+            <div class="m-chips"><span class="m-chip">19<small>7°</small></span><span class="m-chip">22<small>8°</small></span><span class="m-chip p s">?<small>9°</small></span><span class="m-chip p">?<small>10°</small></span></div></div>
+          <div class="m-buf"><span>Número para Grupo 5</span><b class="num">11</b></div>
+          <div class="m-pad"><span class="hit">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="ok">OK</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" aria-label="Atajo">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Atajo</div>
+          <h2>¿Ya sabés el número?</h2>
+          <p class="lead">Si viene un caballo solo y lo ves venir, <b>escribí el número antes</b> y tocá <span class="tag">Llegó</span> justo cuando cruza.</p>
+          <p class="lead">Queda anotado con número y hora en un solo paso.</p>
+        </div>
+        <div class="mock">
+          <div class="m-buf"><span>Número listo</span><b class="num">27</b></div>
+          <div class="m-mark">Llegó<small>Anota al N° 27 con la hora exacta</small></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide" aria-label="Corregir">
+      <div class="eyebrow">Errores</div>
+      <h2>Cómo corregir</h2>
+      <ul class="list two">
+        <li><b>Número equivocado</b>Tocá la ficha del caballo, escribí el número correcto y tocá OK.</li>
+        <li><b>Caballo de más</b>Tocá su ficha y elegí <em>Quitar caballo</em>, o usá <em>Deshacer mi último</em>.</li>
+        <li><b>Hora mal de un grupo</b>Tocá el título del grupo (ej. "Grupo 3") y corregí la hora.</li>
+        <li><b>Faltó uno en un grupo</b>Tocá el <span class="tag o">+</span> de ese grupo, escribí el número y tocá OK.</li>
+      </ul>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" aria-label="Largada">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Pestaña Largada 2ª</div>
+          <h2>La largada se arma sola</h2>
+          <p class="lead">Se carga la <b>hora de largada del primero</b> y la app calcula la de cada caballo, con la misma diferencia con que llegó.</p>
+          <p class="lead">Los de un mismo grupo <b>largan juntos</b>.</p>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl num">
+            <thead><tr><th>Orden</th><th>N°</th><th>Dif.</th><th>Largada</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td class="n">27</td><td>—</td><td class="h">12:30:00</td></tr>
+              <tr class="same"><td>2</td><td class="n">14</td><td>+0:38</td><td class="h">12:30:38</td></tr>
+              <tr class="same"><td>3</td><td class="n">31</td><td>+0:38</td><td class="h">12:30:38</td></tr>
+              <tr><td>4</td><td class="n">8</td><td>+0:40</td><td class="h">12:30:40</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" aria-label="El día de la carrera">
+      <div class="eyebrow">El día de la carrera</div>
+      <h2>Cuatro reglas</h2>
+      <ul class="list two">
+        <li class="key"><b>Una sola persona toca LLEGÓ</b>Los demás ayudan cargando números. Si dos marcan el mismo caballo, aparece dos veces.</li>
+        <li><b>Sin señal, seguí igual</b>Se guarda en el teléfono y se envía solo cuando vuelve la conexión.</li>
+        <li><b>Abrila antes, con señal</b>Así queda guardada en el celular. Usá "Agregar a pantalla de inicio".</li>
+        <li><b>Batería cargada</b>La app mantiene la pantalla encendida mientras la usás.</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide cover" aria-label="A probar">
+      <div class="eyebrow">Ahora te toca</div>
+      <h1>A probarla</h1>
+      <p class="lead">Abrí el link que te pasaron y practicá sin miedo. En la versión de prueba <b>cada celular guarda sus propios datos</b>, así que podés equivocarte tranquilo.</p>
+      <p class="lead">Para empezar de cero: <b>Carrera → Empezar carrera nueva</b>. Si algo no se entiende o falta, avisá.</p>
+    </section>
+
+  </div>
+
+  <nav class="nav" aria-label="Navegación">
+    <button id="prev" aria-label="Diapositiva anterior">← Atrás</button>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+      <div class="dots" id="dots"></div>
+      <div class="count num" id="count"></div>
+    </div>
+    <button id="next" class="next" aria-label="Diapositiva siguiente">Seguir →</button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')), i=0, dots=document.getElementById('dots');
+  slides.forEach(function(s,k){var b=document.createElement('button');b.setAttribute('aria-label','Ir a la diapositiva '+(k+1));b.onclick=function(){go(k)};dots.appendChild(b)});
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('on',k===n);s.classList.toggle('back',k<n)});
+    [].forEach.call(dots.children,function(d,k){d.setAttribute('aria-current',k===n)});
+    document.getElementById('prev').disabled=n===0;
+    var nx=document.getElementById('next'); nx.disabled=n===slides.length-1;
+    document.getElementById('count').textContent=(n+1)+' de '+slides.length;
+    slides[n].scrollTop=0; i=n;
+  }
+  document.getElementById('prev').onclick=function(){go(i-1)};
+  document.getElementById('next').onclick=function(){go(i+1)};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(i+1)}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1)}
+    else if(e.key==='Home')go(0); else if(e.key==='End')go(slides.length-1);
+  });
+  var x0=null,y0=null;
+  var st=document.getElementById('stage');
+  st.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+  st.addEventListener('touchend',function(e){
+    if(x0===null)return; var dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.3)go(i+(dx<0?1:-1)); x0=null;
+  });
+  go(0);
+})();
+</script>
+</body>
+</html>
