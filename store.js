@@ -213,7 +213,7 @@ window.Store = (function () {
       const participants = Object.keys(names).map((n, i) => ({ id: n, num: n, order: i, data: { Caballo: names[n][0], Jinete: names[n][1], Categoría: +n % 3 ? '80 km' : '80 km Jóvenes' }, status: status[n] || 'carrera', fc: vetd[n] ? vetd[n][0] : null, vetNote: vetd[n] && vetd[n][1] || '', noLarga: !!(vetd[n] && vetd[n][2]) }));
       const past = new Date(); past.setDate(past.getDate() - 21); past.setHours(12, 5, 0, 0);
       return {
-        clubs: { c1: { name: 'Club Hípico del Este', short: 'CHE', logo: '' }, c2: { name: 'Sociedad Criolla Los Horneros', short: 'SCLH', logo: '' } },
+        clubs: { c1: { name: 'Club Hípico del Este', short: 'CHE', logo: '', col1: '#1E4FA3', col2: '#FFFFFF' }, c2: { name: 'Sociedad Criolla Los Horneros', short: 'SCLH', logo: '', col1: '#111111', col2: '#F5C400' } },
         races: {
           r1: { name: 'Raid de la Primavera', place: 'Minas, Lavalleja', km1: 45, km2: 35, clubId: 'c1', date: shift(0), status: '', start0: '08:30:00', start1: '', participants, arrivals: offs.map(([n, s], i) => ({ id: 'e' + i, seq: i + 1, t: b + s * 1000, num: String(n), by: 'demo' })) },
           r2: { name: 'Raid Aniversario', km1: 50, km2: 40, place: 'Sarandí Grande, Florida', clubId: 'c2', date: shift(14), status: '', start1: '', participants: [], arrivals: [] },

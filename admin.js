@@ -2,7 +2,7 @@
   const S = window.Store, $ = id => document.getElementById(id);
   const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm, exportXlsx, reportPDF } = window.R;
   let clubs = [], races = [], staff = [], admins = [], backups = [], me = '', delRace = null, restoring = null;
-  let editRace = null, editClub = null, editStaff = null, logoData = null, confirmKey = null;
+  let editRace = null, editClub = null, editStaff = null, logoData = null, confirmKey = null, cols = null;
 
   if (S.mode === 'demo') $('demo-banner').hidden = false;
   if (S.mode === 'nosdk') { $('nosdk-banner').hidden = false; return; }
@@ -116,16 +116,27 @@
   function renderClubs() {
     $('club-list').innerHTML = clubs.length ? clubs.map(c => {
       const n = races.filter(r => r.clubId === c.id).length, cr = staff.filter(s => (s.clubs || []).includes(c.id)).length;
-      return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(c.name) + '</b><small>' + (c.short ? esc(c.short) + ' · ' : '') + n + ' raid' + (n === 1 ? '' : 's') + ' · ' + cr + ' cronometrista' + (cr === 1 ? '' : 's') + '</small></div>'
+      return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(c.name) + '</b>' + (c.col1 ? '<span class="clubband sm" style="background:' + window.R.clubStripe(c) + '"></span>' : '') + '<small>' + (c.short ? esc(c.short) + ' · ' : '') + n + ' raid' + (n === 1 ? '' : 's') + ' · ' + cr + ' cronometrista' + (cr === 1 ? '' : 's') + '</small></div>'
         + '<div class="actions"><button class="ghost" data-edit-club="' + esc(c.id) + '">Editar</button>' + delBtn('club:' + c.id, 'Borrar') + '</div></div>';
     }).join('') : '<div class="empty-list">Todavía no hay clubes. Creá el primero arriba.</div>';
   }
-  function setLogo(d) { logoData = d; $('c-logo-prev').innerHTML = logoHTML({ logo: d, name: $('c-name').value, short: $('c-short').value }, 56); $('c-logo-clear').hidden = !d; }
+  // Colores de la camiseta (null = sin colores)
+  function setCols(c) {
+    cols = c && c.col1 ? { col1: c.col1, col2: c.col2 || '' } : null;
+    if (cols) { $('c-col1').value = cols.col1; $('c-col2').value = cols.col2 || '#FFFFFF'; }
+    $('c-band').style.background = cols ? window.R.clubStripe(cols) : 'transparent';
+    $('c-band').hidden = !cols; $('c-col-clear').hidden = !cols;
+    $('c-col-note').textContent = cols ? 'La app toma el color del club en sus raids: botón LLEGÓ, resaltados y una franja arriba.' : 'Sin colores: la app usa el verde de siempre. Tocá un cuadrado para elegir.';
+    setLogo(logoData);
+  }
+  ['c-col1', 'c-col2'].forEach(id => $(id).addEventListener('input', () => setCols({ col1: $('c-col1').value, col2: $('c-col2').value })));
+  $('c-col-clear').addEventListener('click', () => setCols(null));
+  function setLogo(d) { logoData = d; $('c-logo-prev').innerHTML = logoHTML(Object.assign({ logo: d, name: $('c-name').value, short: $('c-short').value }, cols || {}), 56); $('c-logo-clear').hidden = !d; }
   $('club-list').addEventListener('click', async e => {
     const ed = e.target.closest('[data-edit-club]');
     if (ed) {
       const c = clubs.find(x => x.id === ed.dataset.editClub); if (!c) return;
-      editClub = c.id; $('c-name').value = c.name || ''; $('c-short').value = c.short || ''; setLogo(c.logo || '');
+      editClub = c.id; $('c-name').value = c.name || ''; $('c-short').value = c.short || ''; logoData = c.logo || ''; setCols(c);
       $('club-form-title').textContent = 'Editar club'; $('c-save').textContent = 'Guardar cambios'; $('c-cancel').hidden = false; note('c-msg', '');
       $('club-form').scrollIntoView({ behavior: 'smooth' }); return;
     }
@@ -154,14 +165,14 @@
   });
   $('c-logo-clear').addEventListener('click', () => setLogo(''));
   ['c-name', 'c-short'].forEach(id => $(id).addEventListener('input', () => setLogo(logoData)));
-  function resetClubForm() { editClub = null; $('club-form').reset(); setLogo(''); $('club-form-title').textContent = 'Nuevo club'; $('c-save').textContent = 'Crear club'; $('c-cancel').hidden = true; }
+  function resetClubForm() { editClub = null; $('club-form').reset(); logoData = ''; setCols(null); $('club-form-title').textContent = 'Nuevo club'; $('c-save').textContent = 'Crear club'; $('c-cancel').hidden = true; }
   $('c-cancel').addEventListener('click', () => { resetClubForm(); note('c-msg', ''); });
   $('club-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const data = { name: $('c-name').value.trim(), short: $('c-short').value.trim().toUpperCase(), logo: logoData || '' };
+    const data = { name: $('c-name').value.trim(), short: $('c-short').value.trim().toUpperCase(), logo: logoData || '', col1: cols ? cols.col1 : '', col2: cols ? (cols.col2 || '') : '' };
     try { await S.saveClub(editClub, data); note('c-msg', editClub ? 'Cambios guardados.' : 'Club creado: ' + data.name + '.'); resetClubForm(); } catch (x) { note('c-msg', errText(x), true); }
   });
-  setLogo('');
+  logoData = ''; setCols(null);
 
   // ---------- Cronometristas ----------
   function renderStaff() {

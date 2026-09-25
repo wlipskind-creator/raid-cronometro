@@ -57,7 +57,7 @@
     window.scrollTo(0, 0);
   }
   function close() {
-    if (unwatch) unwatch(); unwatch = null; current = null;
+    if (unwatch) unwatch(); unwatch = null; current = null; if (window.RaidTema) window.RaidTema.setClub(null);
     $('raid').hidden = true; $('raid').style.display = 'none';
     $('home').hidden = false; $('home').style.display = 'flex';
     document.title = (INFO.title || 'Raids') + ' · En vivo';
@@ -90,6 +90,7 @@
     if (!race && !data.meta.fromCache) { $('race-name').textContent = 'Raid no encontrado'; $('race-sub').textContent = 'Puede que lo hayan borrado. Volvé a la lista de raids.'; $('race-logo').innerHTML = ''; }
     if (!race) return;
     const c = clubs[race.clubId];
+    if (window.RaidTema) window.RaidTema.setClub(c);
     $('race-logo').innerHTML = logoHTML(c, 56);
     $('race-name').textContent = race.name || 'Raid';
     $('race-sub').textContent = clubPlace(race, c) + ' · ' + fmtDate(race.date);

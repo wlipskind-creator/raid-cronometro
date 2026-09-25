@@ -403,19 +403,28 @@ window.R = (function () {
   // "Club · Localidad" para mostrar debajo del nombre del raid
   function clubPlace(r, c) { const k = kmOf(r && r.km1) + kmOf(r && r.km2); return [c ? c.name : '', r && r.place ? r.place : '', k ? fmtKm(k) : ''].filter(Boolean).join(' · ') || 'Sin club'; }
   function initials(name) { return String(name || '?').split(/\s+/).filter(w => w.length > 2 || /^[A-ZÁÉÍÓÚÑ]/.test(w)).slice(0, 3).map(w => w[0]).join('').toUpperCase() || '?'; }
+  // Franja con los colores de la camiseta del club (rayas)
+  function clubStripe(c) {
+    const ok = v => /^#[0-9a-f]{6}$/i.test(v || '');
+    if (!c || !ok(c.col1)) return '';
+    const b = ok(c.col2) ? c.col2 : c.col1;
+    return 'repeating-linear-gradient(90deg,' + c.col1 + ' 0 22px,' + b + ' 22px 44px)';
+  }
   function logoHTML(club, size) {
     size = size || 40;
     const st = 'width:' + size + 'px;height:' + size + 'px';
     if (club && club.logo) return '<img class="logo" src="' + esc(club.logo) + '" alt="" style="' + st + '">';
     const txt = (club && club.short) || initials(club && club.name);
-    return '<span class="logo logo-txt" style="' + st + ';font-size:' + Math.round(size * (txt.length > 3 ? .26 : .36)) + 'px">' + esc(txt) + '</span>';
+    const okc = v => /^#[0-9a-f]{6}$/i.test(v || '');
+    const cc = club && okc(club.col1) ? ';background:' + club.col1 + ';color:' + (okc(club.col2) && club.col2.toLowerCase() !== club.col1.toLowerCase() ? club.col2 : '#FFFFFF') + ';border-color:transparent' : '';
+    return '<span class="logo logo-txt" style="' + st + cc + ';font-size:' + Math.round(size * (txt.length > 3 ? .26 : .36)) + 'px">' + esc(txt) + '</span>';
   }
   function registerSW() {
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

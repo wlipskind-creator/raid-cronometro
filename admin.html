@@ -86,6 +86,13 @@
         <h2 id="club-form-title">Nuevo club</h2>
         <div class="field"><label for="c-name">Nombre del club</label><input id="c-name" required placeholder="Ej.: Club Hípico del Este"></div>
         <div class="field"><label for="c-short">Sigla (se usa si no hay logo)</label><input id="c-short" maxlength="6" placeholder="Ej.: CHE"></div>
+        <div class="field"><label>Colores de la camiseta</label>
+          <div class="colpick">
+            <label class="colsw"><input type="color" id="c-col1" value="#1D6A43"><span>Principal</span></label>
+            <label class="colsw"><input type="color" id="c-col2" value="#FFFFFF"><span>Secundario</span></label>
+            <span class="clubband" id="c-band"></span>
+            <button class="ghost" type="button" id="c-col-clear">Sin colores</button></div>
+          <p class="foot" style="font-size:13px" id="c-col-note">La app toma el color del club en sus raids: botón LLEGÓ, resaltados y una franja arriba.</p></div>
         <div class="field"><label>Logo</label>
           <div class="logoprev"><span id="c-logo-prev"></span>
             <label class="ghost" for="c-logo" style="cursor:pointer">Elegir imagen…</label>

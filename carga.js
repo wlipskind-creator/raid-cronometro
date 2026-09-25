@@ -68,7 +68,7 @@
     $('pick-list').innerHTML = h;
   }
   $('pick-list').addEventListener('click', e => { const b = e.target.closest('[data-race]'); if (b) choose(b.dataset.race); });
-  $('change-raid').addEventListener('click', () => { if (unwatch) unwatch(); unwatch = null; raceSel = null; lsSet('raid-sel', ''); renderPick(); show('pick'); });
+  $('change-raid').addEventListener('click', () => { if (unwatch) unwatch(); unwatch = null; raceSel = null; lsSet('raid-sel', ''); if (window.RaidTema) window.RaidTema.setClub(null); renderPick(); show('pick'); });
   function choose(id) {
     if (unwatch) unwatch();
     raceSel = id; lsSet('raid-sel', id);
@@ -371,6 +371,7 @@
     validSel(); renderStatus();
     const race = data.race || {}, gs = groups(data.arrivals), pend = pending(), t = target(), P = pm();
     const club = clubs[race.clubId], gone = !data.race && !data.meta.fromCache;
+    if (window.RaidTema) window.RaidTema.setClub(data.race ? club : null);
     $('race-logo').innerHTML = data.race ? logoHTML(club, 36) : '';
     $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>' + esc(data.race ? clubPlace(race, club) : 'Cronometristas') + ' · ' + esc(fmtDate(race.date)) + '</small>';
     $('norace').hidden = !gone;
