@@ -262,3 +262,10 @@ textarea.paste{width:100%;min-height:7em;font:14px/1.4 ui-monospace,Menlo,monosp
 .brandmark{width:clamp(52px,11vw,72px);height:auto;border-radius:22%;flex:0 0 auto}
 .danger-card{border-color:var(--danger)}
 .danger-card h2{color:var(--danger)}
+/* iPhone: los campos de fecha y hora no se salen del recuadro */
+input[type="date"],input[type="time"]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;box-sizing:border-box;min-height:44px;text-align:left}
+input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date-and-time-value{text-align:left}
+.form .field input[type="date"]{width:100%;max-width:26em}
+/* la fila de pestañas avisa que hay más a la derecha */
+.tabs{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(to right,#000 88%,transparent);-webkit-mask-image:linear-gradient(to right,#000 88%,transparent)}
+.tabs button:last-child{margin-right:24px}
