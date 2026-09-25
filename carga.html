@@ -50,6 +50,7 @@
     <div class="tabs" role="tablist">
       <button id="tab-lleg" role="tab" aria-selected="true">Llegadas</button>
       <button id="tab-larg" role="tab" aria-selected="false">Largada</button>
+      <button id="tab-vet" role="tab" aria-selected="false">Veterinaria</button>
       <button id="tab-res" role="tab" aria-selected="false">Resultados</button>
       <button id="tab-part" role="tab" aria-selected="false">Participantes</button>
       <button id="tab-carr" role="tab" aria-selected="false">Carrera</button>
@@ -108,8 +109,21 @@
         <div class="field"><label for="start1">Hora de largada del 1° en la 2ª etapa</label><input id="start1" type="time" step="1" class="num">
           <p class="foot" style="font-size:13px" id="start1-auto">Se calcula sola: llegada del 1° en la 1ª etapa + neutralización. Solo cargala si querés cambiarla.</p></div>
         <p>En la 2ª etapa cada caballo larga con la diferencia con que llegó detrás del primero. Los de un mismo grupo largan juntos.</p>
+        <div class="field"><label for="cierre">Cierre de control</label><input id="cierre" type="time" step="1" class="num">
+          <p class="foot" style="font-size:13px" id="cierre-auto"></p></div>
+        <div class="field"><label for="trofeo">Ganador trofeo F.E.U. (N°)</label><input id="trofeo" inputmode="text" placeholder="Ej.: 25 (44)" style="max-width:12em"></div>
       </div>
       <div class="table" id="startlist"></div>
+    </section>
+
+    <!-- VETERINARIA -->
+    <section id="view-vet" hidden style="flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>Control veterinario</h2>
+        <p>Neutralización de la 1ª etapa. Para cada caballo cargá la frecuencia cardíaca y, si corresponde, el motivo. Con <b>Rech. Elim.</b>, <b>R.V.</b> o <b>F.C.E.</b> queda marcado <b>No larga</b> la 2ª etapa. Se puede cambiar a mano.</p>
+        <div class="field"><label for="vetmin">Minutos para el control veterinario</label><input id="vetmin" type="number" min="0" step="1" inputmode="numeric" class="num" placeholder="20" style="max-width:8em"></div>
+      </div>
+      <div class="vlist" id="vetlist"></div>
     </section>
 
     <!-- RESULTADOS -->
@@ -156,6 +170,7 @@
             <option value="">Automático según la fecha</option><option value="proximo">Próximo</option><option value="en_curso">En curso</option><option value="terminado">Terminado</option>
           </select></div>
         <p>El público ve los raids ordenados por estado: en curso, próximos y terminados.</p>
+        <div class="actions"><button class="primary" id="pdf">Planilla final FEU (PDF)</button></div>
         <div class="actions"><button class="ghost" id="xlsx">Descargar en Excel</button><button class="ghost" id="backup-now">Guardar copia de seguridad</button></div>
         <div class="actions"><button class="ghost" id="copy">Copiar planilla</button><a class="ghost" id="public-link" href="index.html" target="_blank" rel="noopener" style="text-decoration:none">Ver en el panel público</a></div>
         <textarea class="copybox" id="copybox" readonly hidden></textarea>

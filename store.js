@@ -148,6 +148,8 @@ window.Store = (function () {
         await commitChunks(ops);
       },
       setStatus(num, status) { if (raceId) partCol().doc(num).set({ num, status }, { merge: true }).catch(fail); },
+      setVet(num, patch) { if (raceId) partCol().doc(num).set(Object.assign({ num }, patch), { merge: true }).catch(fail); },
+      snapshotOf: id => raceSnapshot(id),
       async clearParticipants() { if (!raceId) return; await backupRace(raceId, 'Antes de borrar la lista de participantes'); const col = partCol(); const ds = (await col.get()).docs; await commitChunks(ds.map(d => b => b.delete(col.doc(d.id)))); },
       backupNow(reason) { return backupRace(raceId, reason || 'Copia manual'); },
       snapshot: () => raceSnapshot(raceId),
@@ -198,7 +200,7 @@ window.Store = (function () {
 
   // ---------------- DEMOSTRACIÓN ----------------
   function demoStore() {
-    const KEY = 'raid-demo-v5';
+    const KEY = 'raid-demo-v6';
     const pad = n => String(n).padStart(2, '0');
     const dstr = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
     const shift = days => { const d = new Date(); d.setDate(d.getDate() + days); return dstr(d); };
@@ -207,7 +209,8 @@ window.Store = (function () {
       const offs = [[27, 0], [14, 38], [31, 38], [8, 40], [45, 41], [3, 41], [19, 95], [22, 95], [11, 95], [5, 95], [40, 98], [16, 98], [33, 99], [2, 99], [29, 100]];
       const names = { 2: ['Tábano', 'L. Silva'], 3: ['Lucero', 'M. Rodríguez'], 5: ['Pampero', 'A. Gómez'], 6: ['Chimango', 'F. Núñez'], 8: ['Tordillo', 'P. Méndez'], 9: ['Zorzal', 'C. Pereira'], 11: ['Malacara', 'J. Acosta'], 12: ['Ñandú', 'R. Sosa'], 14: ['Bagual', 'D. Fernández'], 16: ['Cimarrón', 'S. López'], 17: ['Alazán', 'G. Martínez'], 18: ['Tero', 'E. Cabrera'], 19: ['Moro', 'N. Díaz'], 22: ['Picazo', 'V. Castro'], 24: ['Carancho', 'H. Suárez'], 25: ['Overo', 'I. Ramos'], 27: ['Gateado', 'B. Olivera'], 29: ['Rosillo', 'T. Benítez'], 31: ['Colorado', 'M. Ferreira'], 33: ['Zaino', 'K. Álvarez'], 36: ['Hornero', 'O. Viera'], 38: ['Tostado', 'U. Correa'], 40: ['Pangaré', 'W. Techera'], 41: ['Yaguareté', 'Y. Moreira'], 45: ['Bayo', 'Q. Silveira'] };
       const status = { 17: 'abandono', 25: 'retirado' };
-      const participants = Object.keys(names).map((n, i) => ({ id: n, num: n, order: i, data: { Caballo: names[n][0], Jinete: names[n][1], Categoría: +n % 3 ? '80 km' : '80 km Jóvenes' }, status: status[n] || 'carrera' }));
+      const vetd = { 27: [48], 14: [52], 31: [66, 'F.C.E.', true], 8: [50], 45: [54, 'Rech.'] };
+      const participants = Object.keys(names).map((n, i) => ({ id: n, num: n, order: i, data: { Caballo: names[n][0], Jinete: names[n][1], Categoría: +n % 3 ? '80 km' : '80 km Jóvenes' }, status: status[n] || 'carrera', fc: vetd[n] ? vetd[n][0] : null, vetNote: vetd[n] && vetd[n][1] || '', noLarga: !!(vetd[n] && vetd[n][2]) }));
       const past = new Date(); past.setDate(past.getDate() - 21); past.setHours(12, 5, 0, 0);
       return {
         clubs: { c1: { name: 'Club Hípico del Este', short: 'CHE', logo: '' }, c2: { name: 'Sociedad Criolla Los Horneros', short: 'SCLH', logo: '' } },
@@ -275,6 +278,8 @@ window.Store = (function () {
         items.forEach(p => next.push(Object.assign({ status: 'carrera' }, cur[p.num] || {}, { id: p.num, num: p.num, data: p.data, order: p.order })));
         R().participants = next; save(); return Promise.resolve();
       },
+      setVet(num, patch) { const p = pm()[num]; if (p) Object.assign(p, patch); else (R().participants = R().participants || []).push(Object.assign({ id: num, num, data: {} }, patch)); save(); },
+      snapshotOf: id => Promise.resolve(st.races[id] ? { race: raceMeta(id, st.races[id]), arrivals: st.races[id].arrivals.slice(), participants: (st.races[id].participants || []).slice() } : null),
       setStatus(num, status) { const p = pm()[num]; if (p) p.status = status; else (R().participants = R().participants || []).push({ id: num, num, status, data: {} }); save(); },
       clearParticipants() { dbackup(raceId, 'Antes de borrar la lista de participantes'); R().participants = []; save(); return Promise.resolve(); },
       backupNow(reason) { dbackup(raceId, reason || 'Copia manual'); save(); return Promise.resolve(); },

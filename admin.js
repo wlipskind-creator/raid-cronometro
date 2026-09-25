@@ -1,6 +1,6 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm, exportXlsx } = window.R;
+  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm, exportXlsx, reportPDF } = window.R;
   let clubs = [], races = [], staff = [], admins = [], backups = [], me = '', delRace = null, restoring = null;
   let editRace = null, editClub = null, editStaff = null, logoData = null, confirmKey = null;
 
@@ -66,10 +66,18 @@
     $('raid-list').innerHTML = l.length ? l.map(r => {
       const st = raceStatus(r), c = clubs.find(x => x.id === r.clubId);
       return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(r.name || 'Raid') + '</b><small>' + esc(clubPlace(r, c)) + ' · ' + esc(fmtDate(r.date)) + ' · <span class="badge ' + st + '">' + RSTATUS[st] + '</span>' + (r.status ? '' : ' (automático)') + '</small></div>'
-        + '<div class="actions"><button class="ghost" data-edit-race="' + esc(r.id) + '">Editar</button><button class="ghost danger" data-delrace="' + esc(r.id) + '">Borrar</button></div></div>';
+        + '<div class="actions"><button class="ghost" data-pdf="' + esc(r.id) + '">Planilla PDF</button><button class="ghost" data-edit-race="' + esc(r.id) + '">Editar</button><button class="ghost danger" data-delrace="' + esc(r.id) + '">Borrar</button></div></div>';
     }).join('') : '<div class="empty-list">Todavía no hay raids.</div>';
   }
   $('raid-list').addEventListener('click', async e => {
+    const pd = e.target.closest('[data-pdf]');
+    if (pd) {
+      note('r-msg', 'Preparando la planilla…');
+      try { const snap = await S.snapshotOf(pd.dataset.pdf); if (!snap || !snap.race) throw new Error('No se encontró el raid.');
+        const f = await reportPDF(snap.arrivals, snap.race, snap.participants, clubs.find(c => c.id === snap.race.clubId)); note('r-msg', 'Planilla lista: ' + f); }
+      catch (x) { note('r-msg', errText(x), true); }
+      return;
+    }
     const ed = e.target.closest('[data-edit-race]');
     if (ed) {
       const r = races.find(x => x.id === ed.dataset.editRace); if (!r) return;

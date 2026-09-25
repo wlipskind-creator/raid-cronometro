@@ -34,8 +34,14 @@ window.R = (function () {
   }
 
   // ---------- Participantes ----------
-  const STATUS = { carrera: 'En carrera', abandono: 'Abandono', retirado: 'Retirado' };
+  const STATUS = { carrera: 'En carrera', abandono: 'Abandono', retirado: 'Retirado', descalificado: 'Descalificado' };
   const statusOf = p => (p && STATUS[p.status]) ? p.status : 'carrera';
+  // Fuera de carrera: abandono, retirado, descalificado o no pasó el control veterinario (no larga la 2ª).
+  const isOut = p => !!p && (statusOf(p) !== 'carrera' || !!p.noLarga);
+  const outLabel = p => (p && p.noLarga && statusOf(p) === 'carrera') ? 'No larga' : STATUS[statusOf(p)];
+  // Motivos del control veterinario (los últimos tres dejan al caballo sin largar la 2ª etapa)
+  const VET_NOTES = ['Rech.', 'Rech. Elim.', 'R.V.', 'F.C.E.'];
+  const VET_OUT = ['Rech. Elim.', 'R.V.', 'F.C.E.'];
   const numKey = n => String(n == null ? '' : n).trim().replace(/^0+(?=\d)/, '').replace(/\//g, '-');
   const byNum = (a, b) => (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0) || String(a.num).localeCompare(String(b.num));
   // Lee texto pegado desde Excel, WhatsApp o un CSV. Devuelve filas (arrays de celdas).
@@ -86,6 +92,22 @@ window.R = (function () {
     return parts.filter(Boolean).join(' · ');
   }
   function pShort(p) { const n = pName(p); return n.split(' · ')[0] || ''; }
+  // Apellido para identificar rápido: columna "Apellido" si existe; si no, el del jinete o el del dueño.
+  function pSur(p) {
+    if (!p || !p.data) return '';
+    const ks = Object.keys(p.data);
+    if (!ks.some(k => /caballo|equino|animal|nombre/i.test(k))) return '';
+    const ap = ks.find(k => /apellido/i.test(k));
+    if (ap && p.data[ap]) return String(p.data[ap]).trim();
+    const who = ks.find(k => /jinete|binomio|corredor|piloto/i.test(k)) || ks.find(k => /propietario|due[ñn]o|stud|haras|criador/i.test(k));
+    const v = who ? String(p.data[who] || '').trim() : '';
+    if (!v) return '';
+    if (v.includes(',')) return v.split(',')[0].trim();
+    const w = v.split(/\s+/).filter(x => x.replace(/\./g, '').length > 1);
+    return w.length ? w[w.length - 1] : v;
+  }
+  // Nombre del caballo y, debajo, el apellido
+  const tagHTML = p => { const h = pShort(p), su = pSur(p); return esc(h) + (su && su !== h ? '<br>' + esc(su) : ''); };
   const pMap = list => { const m = {}; (list || []).forEach(p => { m[p.num] = p; }); return m; };
 
   // ---------- Etapas, tiempos y promedios ----------
@@ -130,7 +152,7 @@ window.R = (function () {
       // Tiempo total neto: de la largada de la 1ª a la llegada de la 2ª, menos la neutralización.
       const tot = (t2[num] && start0 !== null && rest !== null) ? t2[num].t - start0 - rest : null;
       const p = pm[num];
-      return { num, p, out: p ? statusOf(p) !== 'carrera' : false, arr1: t1[num] ? t1[num].t : null, arr2: t2[num] ? t2[num].t : null,
+      return { num, p, out: isOut(p), arr1: t1[num] ? t1[num].t : null, arr2: t2[num] ? t2[num].t : null,
         e1, e2, tot, v1: speed(km1, e1), v2: speed(km2, e2), vt: speed(km1 + km2, tot), seq2: t2[num] ? (t2[num].seq || 0) : 0 };
     });
     // Orden: los que terminaron la 2ª etapa por llegada; después el resto por su llegada a la 1ª.
@@ -166,10 +188,10 @@ window.R = (function () {
       L.push(''); L.push('RESULTADOS' + (res.km1 || res.km2 ? ' · ' + kmText(race) : ''));
       L.push('Puesto\tN°\tCaballo / Jinete\tTiempo 1ª\tProm. 1ª (km/h)\tTiempo 2ª\tProm. 2ª (km/h)\tTiempo total\tProm. general (km/h)');
       const n = v => v == null ? '' : v.toFixed(2).replace('.', ',');
-      res.rows.forEach(r => L.push([r.pos || (r.out ? STATUS[statusOf(r.p)] : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)].join('\t')));
+      res.rows.forEach(r => L.push([r.pos || (r.out ? outLabel(r.p) : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)].join('\t')));
     }
-    const out = (parts || []).filter(p => statusOf(p) !== 'carrera').sort(byNum);
-    if (out.length) { L.push(''); L.push('N°\tCaballo / Jinete\tEstado'); out.forEach(p => L.push([p.num, pName(p), STATUS[statusOf(p)]].join('\t'))); }
+    const out = (parts || []).filter(p => isOut(p)).sort(byNum);
+    if (out.length) { L.push(''); L.push('N°\tCaballo / Jinete\tEstado'); out.forEach(p => L.push([p.num, pName(p), outLabel(p)].join('\t'))); }
     return L.join('\n');
   }
   // Copia en Excel de un raid: llegadas de cada etapa, participantes y resultados.
@@ -191,12 +213,117 @@ window.R = (function () {
       add('Llegadas ' + st + 'ª', rows);
     });
     const keys = [...new Set(parts.flatMap(p => Object.keys(p.data || {})))];
-    add('Participantes', [['N°', ...keys, 'Estado']].concat(parts.slice().sort(byNum).map(p => [p.num, ...keys.map(k => (p.data || {})[k] || ''), STATUS[statusOf(p)]])));
+    add('Participantes', [['N°', ...keys, 'Estado']].concat(parts.slice().sort(byNum).map(p => [p.num, ...keys.map(k => (p.data || {})[k] || ''), outLabel(p)])));
     const res = results(all, race, parts), n = v => v == null ? '' : Math.round(v * 100) / 100;
     add('Resultados', [['Puesto', 'N°', 'Caballo / Jinete', 'Tiempo 1ª', 'Prom. 1ª (km/h)', 'Tiempo 2ª', 'Prom. 2ª (km/h)', 'Tiempo total', 'Prom. general (km/h)']]
-      .concat(res.rows.map(r => [r.pos || (r.out ? STATUS[statusOf(r.p)] : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)])));
+      .concat(res.rows.map(r => [r.pos || (r.out ? outLabel(r.p) : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)])));
     XLSX.writeFile(wb, fileName || ((race.name || 'raid').replace(/[\\/:*?"<>|]/g, '') + '.xlsx'));
   }
+  // ---------- Planilla final (formato FEU) ----------
+  const hsLong = ms => { if (ms == null) return ''; const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), x = t % 60; return h + ' Hs. ' + pad2(m) + "' " + pad2(x) + "''"; };
+  const hsClock = t => { if (t == null) return ''; const d = new Date(t); return d.getHours() + ' hs. ' + pad2(d.getMinutes()) + "' " + pad2(d.getSeconds()) + "''"; };
+  const kmh3 = v => v == null ? '—' : v.toFixed(3).replace('.', ',') + ' Kmts./Hs.';
+  // Cierre de control: llegada del primero en la 2ª etapa + 60 min (raids de 90 km o más) o + 50 min (menores).
+  const cierreMinOf = race => (kmOf(race && race.km1) + kmOf(race && race.km2)) >= 90 ? 60 : 50;
+  function cierreOf(race, all) {
+    if (race && race.cierre) return { hora: race.cierre, auto: false };
+    const a2 = ofStage(all, 2).filter(a => a.num);
+    if (!a2.length) return { hora: '', auto: true };
+    return { hora: hms(Math.min.apply(null, a2.map(a => a.t)) + cierreMinOf(race) * 60000), auto: true };
+  }
+  const vetMinOf = race => { const n = parseFloat(race && race.vetMin); return isFinite(n) && n >= 0 ? n : 20; };
+  function reportData(all, race, parts, club) {
+    race = race || {}; parts = parts || [];
+    const pm = pMap(parts), res = results(all, race, parts);
+    const a1 = sorted(ofStage(all, 1)).filter(a => a.num), a2 = sorted(ofStage(all, 2)).filter(a => a.num);
+    const seen1 = new Set(), seen2 = new Set();
+    const arr1 = a1.filter(a => !seen1.has(a.num) && seen1.add(a.num)), arr2 = a2.filter(a => !seen2.has(a.num) && seen2.add(a.num));
+    const start0 = res.start0, start2 = res.start2, rest = res.rest;
+    const km1 = res.km1, km2 = res.km2;
+    const starts = {}; startList(ofStage(all, 1), start2Of(race, all)).forEach(r => { if (r.num && r.start != null) starts[r.num] = r.start; });
+    const st = p => statusOf(p);
+    // 1ª etapa
+    const largaron1 = parts.length ? parts.filter(p => st(p) !== 'retirado').length : arr1.length;
+    const aband1 = parts.filter(p => st(p) === 'abandono' && !seen1.has(p.num)).map(p => p.num).sort((x, y) => (+x) - (+y));
+    const t1 = (arr1.length && start0 != null) ? arr1[0].t - start0 : null;
+    // 2ª etapa: largan los que llegaron a la 1ª y pasaron el control veterinario
+    const larg2 = arr1.filter(a => { const p = pm[a.num]; return !(p && (p.noLarga || st(p) === 'retirado')); });
+    const aband2 = larg2.filter(a => !seen2.has(a.num)).map(a => a.num).sort((x, y) => (+x) - (+y));
+    const win = res.summary.winner;
+    const t2 = (win && start2 != null) ? win.arr2 - start2 : null;
+    const tt = win ? win.tot : null;
+    const neut = arr1.map((a, i) => {
+      const p = pm[a.num] || {};
+      const fc = [p.fc, p.vetNote].filter(x => x !== undefined && x !== null && x !== '').join(' ');
+      const noLarga = !!p.noLarga || st(p) === 'retirado' || st(p) === 'abandono' || st(p) === 'descalificado';
+      return { pos: i + 1, num: a.num, llegada: a.t, vet: a.t + vetMinOf(race) * 60000, fc, noLarga, largada: noLarga ? null : starts[a.num] };
+    });
+    const desc = new Set(parts.filter(p => st(p) === 'descalificado').map(p => p.num));
+    const clasif = arr2.filter(a => !desc.has(a.num) && !(pm[a.num] && pm[a.num].noLarga)).map((a, i) => ({ pos: i + 1, num: a.num, llegada: a.t, total: (start0 != null && rest != null) ? a.t - start0 - rest : null }));
+    const fmtD = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return dd + '/' + m + '/' + y; };
+    return { inst: club ? club.name : '', name: race.name || 'Raid', place: race.place || '', fecha: fmtD(race.date), km1, km2, dist: km1 + km2, start0,
+      largaron1, aband1, t1, v1: speed(km1, t1), largaron2: larg2.length, aband2, t2, v2: speed(km2, t2), tt, vt: speed(km1 + km2, tt),
+      winner: win ? win.num : '', trofeo: race.trofeo || '', cierre: cierreOf(race, all).hora, neut, clasif, desc: [...desc].sort((x, y) => (+x) - (+y)) };
+  }
+  function loadScriptOnce(src, test) {
+    if (test()) return Promise.resolve();
+    return new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => ko(new Error('No se pudo preparar el PDF. Revisá la conexión.')); document.head.appendChild(sc); });
+  }
+  async function reportPDF(all, race, parts, club) {
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => window.jspdf);
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', () => window.jspdf && window.jspdf.jsPDF.API.autoTable);
+    const D = reportData(all, race, parts, club);
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    const BLUE = [47, 84, 150], LIGHT = [220, 230, 242], RED = [230, 0, 0], W = 190, L = 10;
+    const cellBox = { lineColor: [0, 0, 0], lineWidth: 0.2, textColor: [0, 0, 0], font: 'helvetica', fontSize: 9, fontStyle: 'bold', halign: 'center', valign: 'middle', cellPadding: 1.2 };
+    const km = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+    const t = (body, opts) => { doc.autoTable(Object.assign({ startY: y, margin: { left: L, right: L }, tableWidth: W, theme: 'grid', styles: cellBox, body }, opts || {})); y = doc.lastAutoTable.finalY; };
+    let y = 10;
+    t([[{ content: 'INSTITUCIÓN ORGANIZADORA:     ' + (D.inst || ''), styles: { fillColor: BLUE, textColor: [255, 255, 255], fontSize: 13 } }]]);
+    t([[{ content: D.name.toUpperCase(), styles: { fontSize: 14, textColor: BLUE } }]]);
+    t([['FECHA ' + D.fecha, 'DISTANCIA ' + km(D.dist) + ' KMTS.', 'HORA LARGADA ' + (D.start0 != null ? hsLong(D.start0 - new Date(new Date(D.start0).setHours(0, 0, 0, 0))) : '')]], { columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 60 } } });
+    const etapa = (lab, kmv, larg, ab, tm, v, abLabel) => t([
+      [{ content: lab, rowSpan: 2, styles: { fillColor: BLUE, textColor: [255, 255, 255] } }, 'DE ' + km(kmv) + ' KMTS.  ---  LARGARON ' + larg, { content: 'ABANDONAN LOS Nº  ' + (ab.length ? ab.join(' - ') : abLabel), styles: ab.length ? {} : { textColor: RED } }],
+      ['TIEMPO ' + (tm != null ? hsLong(tm) : '—'), 'PROMEDIO ' + kmh3(v)]], { columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 78 } } });
+    etapa('1ª ETAPA', D.km1, D.largaron1, D.aband1, D.t1, D.v1, 'NO HUBO ABANDONOS');
+    etapa('2ª ETAPA', D.km2, D.largaron2, D.aband2, D.t2, D.v2, 'NO HUBO ABANDONOS');
+    t([[{ content: 'TOTAL', styles: { fillColor: BLUE, textColor: [255, 255, 255] } }, 'TIEMPO TOTAL ' + (D.tt != null ? hsLong(D.tt) : '—'), 'PROMEDIO GENERAL ' + kmh3(D.vt)]], { columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 78 } } });
+    t([['GANADOR de la COMPETENCIA Nº ' + (D.winner || '—'), 'GANADOR TROFEO F.E.U. Nº ' + (D.trofeo || '—')]], { columnStyles: { 0: { cellWidth: 100 } } });
+    y += 3;
+    const head = { fillColor: LIGHT, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontSize: 7, halign: 'center', cellPadding: 1 };
+    const small = Object.assign({}, cellBox, { fontSize: 7.5, cellPadding: 1 });
+    const neutBody = D.neut.map(n => [n.pos, n.num, hsClock(n.llegada), hsClock(n.vet), n.fc, n.noLarga ? 'NO LARGA' : hsClock(n.largada)]);
+    const clasBody = D.clasif.length ? D.clasif.map(c => [c.pos, c.num, hsClock(c.llegada), c.total != null ? hsLong(c.total) : '']) : [[{ content: 'Sin llegadas en la 2ª etapa', colSpan: 4 }]];
+    const redNo = h => { if (h.section === 'body' && h.column.index === 5 && h.cell.raw === 'NO LARGA') { h.cell.styles.fillColor = RED; h.cell.styles.textColor = [255, 255, 255]; } };
+    const pieRows = [['CIERRE DE CONTROL   ' + (D.cierre ? D.cierre.replace(/^(\d+):(\d+):?(\d+)?$/, (m, h, mi, se) => (+h) + ' H ' + mi + " ' " + (se || '00') + " ''") : '—')],
+      ['L U N E S  -  EQUINOS DESCALIFICADOS:  ' + (D.desc.length ? D.desc.join(' - ') : 'ninguno')]];
+    const fits = Math.max(D.neut.length, D.clasif.length + 3) <= 38;
+    const neutTable = (left, width) => doc.autoTable({ startY: y, margin: { left, right: 210 - left - width }, tableWidth: width, theme: 'grid', styles: small,
+      head: [[{ content: 'N E U T R A L I Z A C I Ó N', colSpan: 6, styles: { fontSize: 9 } }], ['', 'Nº', 'HORA LLEGADA', 'HORA CONT. VET.', 'FREC. CARD. / MOT. DESC.', 'HORA LARGADA']],
+      headStyles: head, body: neutBody, columnStyles: { 0: { cellWidth: 7, fillColor: LIGHT }, 1: { cellWidth: 9 } }, didParseCell: redNo });
+    const clasTable = (left, width, startY) => doc.autoTable({ startY, margin: { left, right: 210 - left - width }, tableWidth: width, theme: 'grid', styles: small,
+      head: [[{ content: 'C L A S I F I C A C I Ó N   F I N A L', colSpan: 4, styles: { fontSize: 9 } }], ['', 'Nº', 'HORA LLEGADA', 'TIEMPO TOTAL']],
+      headStyles: head, body: clasBody, columnStyles: { 0: { cellWidth: 7, fillColor: LIGHT }, 1: { cellWidth: 9 } } });
+    const pie = (left, width, startY) => doc.autoTable({ startY, margin: { left, right: 210 - left - width }, tableWidth: width, theme: 'grid', styles: Object.assign({}, small, { halign: 'left' }), body: pieRows });
+    if (fits) {
+      // Como la planilla de la FEU: neutralización a la izquierda y clasificación a la derecha
+      const top = y;
+      neutTable(L, 122);
+      const endLeft = doc.lastAutoTable.finalY;
+      clasTable(L + 124, W - 124, top);
+      pie(L + 124, W - 124, doc.lastAutoTable.finalY);
+      y = Math.max(endLeft, doc.lastAutoTable.finalY);
+    } else {
+      // Muchos caballos: una tabla debajo de la otra
+      neutTable(L, W); clasTable(L, W, doc.lastAutoTable.finalY + 4); pie(L, W, doc.lastAutoTable.finalY);
+    }
+    const fname = 'Planilla FEU - ' + D.name.replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+    const blob = doc.output('blob'), url = URL.createObjectURL(blob), link = document.createElement('a');
+    link.href = url; link.download = fname; document.body.appendChild(link); link.click();
+    setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 4000);
+    return fname;
+  }
+
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // ---------- Raids y clubes ----------
@@ -241,7 +368,7 @@ window.R = (function () {
     }
   }
   return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, sheet, esc, registerSW,
-    STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap,
+    STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
-    stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx };
+    stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };
 })();

@@ -1,6 +1,6 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, stageOf, ofStage, fmtKmh, kmText, results, neutralOf, start2Of, exportXlsx } = window.R;
+  const { tagHTML, isOut, outLabel, VET_NOTES, VET_OUT, hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, stageOf, ofStage, fmtKmh, kmText, results, neutralOf, start2Of, exportXlsx, reportPDF, vetMinOf, cierreOf, cierreMinOf } = window.R;
   let data = { raceId: null, race: null, arrivals: [], participants: [], meta: {} };
   let buf = '', sel = null, view = 'lleg', online = navigator.onLine;
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -323,6 +323,14 @@
   // ---------- Carrera ----------
   $('start1').addEventListener('change', e => S.setRace({ start1: e.target.value }));
   $('start0').addEventListener('change', e => S.setRace({ start0: e.target.value }));
+  $('cierre').addEventListener('change', e => S.setRace({ cierre: e.target.value }));
+  $('trofeo').addEventListener('change', e => S.setRace({ trofeo: e.target.value.trim() }));
+  $('vetmin').addEventListener('change', e => { const v = e.target.value === '' ? 20 : Math.max(0, parseInt(e.target.value, 10) || 0); S.setRace({ vetMin: v }); });
+  $('pdf').addEventListener('click', async () => {
+    $('msg2').textContent = 'Preparando la planilla…';
+    try { const f = await reportPDF(data.all, data.race, parts(), clubs[(data.race || {}).clubId]); $('msg2').textContent = 'Planilla lista: ' + f; }
+    catch (x) { $('msg2').textContent = (x && x.message) || String(x); }
+  });
   $('neutral').addEventListener('change', e => { const v = e.target.value === '' ? 60 : Math.max(0, parseInt(e.target.value, 10) || 0); S.setRace({ neutral: v }); });
   $('race-status').addEventListener('change', e => S.setRace({ status: e.target.value }));
   $('xlsx').addEventListener('click', async () => {
@@ -341,7 +349,7 @@
     try { navigator.clipboard.writeText(txt).then(() => { $('msg2').textContent = 'Planilla copiada. Se puede pegar en Excel o WhatsApp.'; }, fb); } catch (e) { fb(); }
   });
 
-  const VIEWS = ['lleg', 'larg', 'res', 'part', 'carr'];
+  const VIEWS = ['lleg', 'larg', 'vet', 'res', 'part', 'carr'];
   function setView(v) {
     view = v;
     VIEWS.forEach(k => {
@@ -369,6 +377,12 @@
     if (document.activeElement !== $('start1')) $('start1').value = race.start1 || '';
     if (document.activeElement !== $('start0')) $('start0').value = race.start0 || '';
     if (document.activeElement !== $('neutral')) $('neutral').value = neutralOf(race);
+    if (document.activeElement !== $('cierre')) $('cierre').value = race.cierre || '';
+    { const c = cierreOf(race, data.all), m = cierreMinOf(race);
+      const autoTxt = (() => { const r2 = Object.assign({}, race, { cierre: '' }); return cierreOf(r2, data.all).hora; })();
+      $('cierre-auto').textContent = race.cierre ? 'Cargado a mano. Si lo borrás, se calcula solo' + (autoTxt ? ': ' + autoTxt + '.' : '.') : (c.hora ? 'Calculado solo: ' + c.hora + ' (llegada del 1° en la 2ª etapa + ' + m + ' min). Solo cargalo si querés cambiarlo.' : 'Se calcula solo cuando llega el primero de la 2ª etapa: su llegada + ' + m + ' min (' + (m === 60 ? 'raid de 90 km o más' : 'raid de menos de 90 km') + ').'); }
+    if (document.activeElement !== $('trofeo')) $('trofeo').value = race.trofeo || '';
+    if (document.activeElement !== $('vetmin')) $('vetmin').value = vetMinOf(race);
     { const a1 = ofStage(data.all, 1), auto = a1.length ? hms(Math.min.apply(null, a1.map(a => a.t)) + neutralOf(race) * 60000) : '';
       $('start1-auto').textContent = race.start1 ? 'Cargada a mano. Si la borrás, se calcula sola' + (auto ? ': ' + auto + '.' : '.') : (auto ? 'Calculada sola: ' + auto + ' (llegada del 1° + ' + neutralOf(race) + ' min). Solo cargala si querés cambiarla.' : 'Se calcula sola cuando llega el primero de la 1ª etapa: su llegada + ' + neutralOf(race) + ' min.'); }
     $('buf').textContent = buf || '000'; $('buf').classList.toggle('empty', !buf);
@@ -389,11 +403,11 @@
     const arrived = new Set(data.arrivals.map(a => a.num).filter(Boolean));
     const in1 = new Set(ofStage(data.all, 1).map(a => a.num).filter(Boolean));
     // En la 2ª etapa solo corren los que llegaron en la 1ª
-    const avail = parts().filter(p => statusOf(p) === 'carrera' && !arrived.has(p.num) && (stage === 1 || !in1.size || in1.has(p.num))).sort(byNum);
+    const avail = parts().filter(p => statusOf(p) === 'carrera' && !(stage === 2 && p.noLarga) && !arrived.has(p.num) && (stage === 1 || !in1.size || in1.has(p.num))).sort(byNum);
     $('tiles-wrap').hidden = !parts().length;
     const filt = buf ? avail.filter(p => String(p.num).startsWith(buf)) : avail;
     $('tiles-title').innerHTML = '<b class="num">' + avail.length + '</b> en carrera sin llegar' + (buf ? ' · empiezan con ' + esc(buf) : '');
-    $('tiles').innerHTML = filt.length ? filt.map(p => '<button class="tile num" data-num="' + esc(p.num) + '">' + esc(p.num) + '<small>' + esc(pShort(p)) + '</small></button>').join('')
+    $('tiles').innerHTML = filt.length ? filt.map(p => '<button class="tile num" data-num="' + esc(p.num) + '">' + esc(p.num) + '<small>' + tagHTML(p) + '</small></button>').join('')
       : '<div class="none">' + (avail.length ? 'Ningún caballo en carrera empieza con ' + esc(buf) + '. Si igual es ese número, tocá OK.' : 'Ya llegaron todos los caballos en carrera.') + '</div>';
 
     let h = '', pos = 0; const f = gs[0];
@@ -404,7 +418,7 @@
       h += '<div class="grp' + (i === 0 ? ' first' : '') + (gSel ? ' selected' : '') + '">';
       h += '<button class="ghead" data-act="group" data-t="' + g.t + '"><span class="gname">Grupo ' + (i + 1) + '</span><span class="gtime num">' + hms(g.t) + ' · ' + g.horses.length + ' cab.</span><span class="gdiff num">' + diff + (dprev ? '<small>' + dprev + '</small>' : '') + '</span></button><div class="chips">';
       g.horses.forEach(a => { pos++; const s = sel && sel.k === 'h' && sel.id === a.id; const p = P[a.num];
-        h += '<button class="chip num' + (a.num ? '' : ' pending') + (s ? ' selected' : '') + '" data-act="horse" data-id="' + esc(a.id) + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<span class="nm">' + esc(pShort(p)) + '</span>' : '') + '<small>' + pos + '°</small></button>'; });
+        h += '<button class="chip num' + (a.num ? '' : ' pending') + (s ? ' selected' : '') + '" data-act="horse" data-id="' + esc(a.id) + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<span class="nm">' + tagHTML(p) + '</span>' : '') + '<small>' + pos + '°</small></button>'; });
       h += '<button class="chip add" data-act="addto" data-t="' + g.t + '" aria-label="Sumar caballo a este grupo">+</button></div>';
       if (gSel) h += '<div class="edit"><span class="hint">Corregir la hora de todo el grupo:</span><input id="edit-time" type="time" step="1" value="' + hms(g.t) + '"><button class="ghost danger" data-act="delg" data-t="' + g.t + '">Borrar grupo</button><button class="ghost" data-act="close">Listo</button></div>';
       const hs = g.horses.find(a => sel && sel.k === 'h' && sel.id === a.id);
@@ -418,13 +432,39 @@
     let s = '<div class="row hd"><span>#</span><span>N°</span><span>Grupo</span><span>Diferencia</span><span>Largada</span></div>';
     if (!rows.length) s += '<div class="empty-list">Sin llegadas todavía.</div>';
     rows.forEach(r => {
-      const p = P[r.num], out = p && statusOf(p) !== 'carrera';
-      s += '<div class="row' + (r.num ? '' : ' pending') + (out ? ' past' : '') + '"><span class="pos num">' + r.pos + '</span><span class="n num">' + (esc(r.num) || '?') + (p && pShort(p) ? '<small>' + esc(pShort(p)) + '</small>' : '') + '</span><span class="g">G' + r.group + '</span><span class="d num">' + (r.off ? '+' + dur(r.off) : '—') + '</span><span class="h num">' + (out ? '<small style="font-size:13px">' + STATUS[statusOf(p)] + '</small>' : (r.start !== null ? hms(r.start) : '—')) + '</span></div>';
+      const p = P[r.num], out = isOut(p);
+      s += '<div class="row' + (r.num ? '' : ' pending') + (out ? ' past' : '') + '"><span class="pos num">' + r.pos + '</span><span class="n num">' + (esc(r.num) || '?') + (p && pShort(p) ? '<small>' + tagHTML(p) + '</small>' : '') + '</span><span class="g">G' + r.group + '</span><span class="d num">' + (r.off ? '+' + dur(r.off) : '—') + '</span><span class="h num">' + (out ? '<small style="font-size:13px">' + outLabel(p) + '</small>' : (r.start !== null ? hms(r.start) : '—')) + '</span></div>';
     });
     $('startlist').innerHTML = s;
     renderParts();
     renderRes();
+    renderVet();
   }
+
+  // ---------- Veterinaria ----------
+  function renderVet() {
+    if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#vetlist')) return; // no redibujar mientras escriben
+    const P = pm(), vm = vetMinOf(data.race || {});
+    const a1 = sorted(ofStage(data.all, 1)).filter(a => a.num), seen = new Set();
+    const rows = a1.filter(a => !seen.has(a.num) && seen.add(a.num));
+    if (!rows.length) { $('vetlist').innerHTML = '<div class="empty-list">Todavía no llegó ningún caballo a la 1ª etapa.</div>'; return; }
+    $('vetlist').innerHTML = rows.map((a, i) => {
+      const p = P[a.num] || {}, no = !!p.noLarga;
+      return '<div class="vrow' + (no ? ' no' : '') + '" data-num="' + esc(a.num) + '"><span class="pos num">' + (i + 1) + '</span><span class="n num">' + esc(a.num) + (pShort(p) ? '<small>' + tagHTML(p) + '</small>' : '') + '</span>'
+        + '<span class="t num">Llegó <b>' + hms(a.t) + '</b> · control hasta <b>' + hms(a.t + vm * 60000) + '</b></span>'
+        + '<div class="ctl"><input type="number" inputmode="numeric" placeholder="FC" aria-label="Frecuencia cardíaca del N° ' + esc(a.num) + '" data-f="fc" value="' + esc(p.fc != null ? p.fc : '') + '">'
+        + '<select data-f="vetNote" aria-label="Motivo"><option value="">Sin observación</option>' + VET_NOTES.map(n => '<option' + (p.vetNote === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select>'
+        + '<label><input type="checkbox" data-f="noLarga"' + (no ? ' checked' : '') + '> No larga</label></div></div>';
+    }).join('');
+  }
+  $('vetlist').addEventListener('change', e => {
+    const row = e.target.closest('.vrow'); if (!row) return;
+    const num = row.dataset.num, f = e.target.dataset.f;
+    if (f === 'fc') S.setVet(num, { fc: e.target.value === '' ? null : parseInt(e.target.value, 10) });
+    else if (f === 'vetNote') { const v = e.target.value, nl = VET_OUT.includes(v); S.setVet(num, { vetNote: v, noLarga: nl }); row.querySelector('[data-f="noLarga"]').checked = nl; row.classList.toggle('no', nl); }
+    else if (f === 'noLarga') { S.setVet(num, { noLarga: e.target.checked }); row.classList.toggle('no', e.target.checked); }
+  });
+  $('vetlist').addEventListener('focusout', () => setTimeout(() => { if (!(document.activeElement && document.activeElement.closest && document.activeElement.closest('#vetlist'))) renderVet(); }, 50));
 
   // ---------- Resultados ----------
   function renderRes() {
@@ -440,7 +480,7 @@
     if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay llegadas.</td></tr>';
     res.rows.forEach(r => {
       const cell = (e, v) => e != null ? dur(e) + '<span class="sub">' + fmtKmh(v) + '</span>' : '—';
-      h += '<tr class="' + (r.out ? 'out' : '') + (r.pos === 1 ? ' first' : '') + '"><td class="p">' + (r.pos ? r.pos + '°' : (r.out ? '<small style="font-size:12px">' + STATUS[statusOf(r.p)] + '</small>' : '—')) + '</td><td class="n">' + esc(r.num) + (r.p && pShort(r.p) ? '<small>' + esc(pShort(r.p)) + '</small>' : '') + '</td><td>' + cell(r.e1, r.v1) + '</td><td>' + cell(r.e2, r.v2) + '</td><td class="vt">' + (r.tot != null ? dur(r.tot) + '<span class="sub">' + fmtKmh(r.vt) + '</span>' : '—') + '</td></tr>';
+      h += '<tr class="' + (r.out ? 'out' : '') + (r.pos === 1 ? ' first' : '') + '"><td class="p">' + (r.pos ? r.pos + '°' : (r.out ? '<small style="font-size:12px">' + outLabel(r.p) + '</small>' : '—')) + '</td><td class="n">' + esc(r.num) + (r.p && pShort(r.p) ? '<small>' + tagHTML(r.p) + '</small>' : '') + '</td><td>' + cell(r.e1, r.v1) + '</td><td>' + cell(r.e2, r.v2) + '</td><td class="vt">' + (r.tot != null ? dur(r.tot) + '<span class="sub">' + fmtKmh(r.vt) + '</span>' : '—') + '</td></tr>';
     });
     $('restable').innerHTML = h + '</tbody>';
   }

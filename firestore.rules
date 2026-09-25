@@ -47,7 +47,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, delete: if esAdmin();
       allow update: if esAdmin() || (esCronoDe(resource.data.clubId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['start0', 'start1', 'neutral', 'status']));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['start0', 'start1', 'neutral', 'status', 'vetMin', 'cierre', 'trofeo']));
 
       match /arrivals/{arrivalId} {
         allow read: if true;
