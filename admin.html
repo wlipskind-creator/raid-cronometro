@@ -48,8 +48,14 @@
     <section id="view-raids" style="display:flex;flex-direction:column;gap:14px">
       <form class="card form" id="raid-form">
         <h2 id="raid-form-title">Nuevo raid</h2>
-        <div class="field"><label for="r-name">Nombre del raid</label><input id="r-name" required placeholder="Ej.: Raid de la Primavera 80 km"></div>
+        <div class="field"><label for="r-name">Nombre del raid</label><input id="r-name" required placeholder="Ej.: Raid Libertad – 57ª edición"></div>
         <div class="field"><label for="r-club">Club organizador</label><select id="r-club" required></select></div>
+        <div class="field"><label for="r-place">Localidad</label><input id="r-place" placeholder="Ej.: Cerro Chato, Treinta y Tres"></div>
+        <div class="field"><label>Kilómetros</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input id="r-km1" inputmode="decimal" placeholder="1ª etapa" style="max-width:9em"> <span>+</span>
+            <input id="r-km2" inputmode="decimal" placeholder="2ª etapa" style="max-width:9em">
+            <span class="count" id="r-kmt"></span></div></div>
         <div class="field"><label for="r-date">Fecha</label><input id="r-date" type="date" required></div>
         <div class="field"><label for="r-status">Estado</label>
           <select id="r-status"><option value="">Automático según la fecha</option><option value="proximo">Próximo</option><option value="en_curso">En curso</option><option value="terminado">Terminado</option></select></div>

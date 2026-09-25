@@ -1,6 +1,6 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML } = window.R;
+  const { esc, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, kmOf, fmtKm } = window.R;
   let clubs = [], races = [], staff = [], admins = [], me = '';
   let editRace = null, editClub = null, editStaff = null, logoData = null, confirmKey = null;
 
@@ -64,7 +64,7 @@
     const l = sortRaces(races);
     $('raid-list').innerHTML = l.length ? l.map(r => {
       const st = raceStatus(r), c = clubs.find(x => x.id === r.clubId);
-      return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(r.name || 'Raid') + '</b><small>' + esc(clubName(r.clubId)) + ' · ' + esc(fmtDate(r.date)) + ' · <span class="badge ' + st + '">' + RSTATUS[st] + '</span>' + (r.status ? '' : ' (automático)') + '</small></div>'
+      return '<div class="arow">' + logoHTML(c, 40) + '<div class="main"><b>' + esc(r.name || 'Raid') + '</b><small>' + esc(clubPlace(r, c)) + ' · ' + esc(fmtDate(r.date)) + ' · <span class="badge ' + st + '">' + RSTATUS[st] + '</span>' + (r.status ? '' : ' (automático)') + '</small></div>'
         + '<div class="actions"><button class="ghost" data-edit-race="' + esc(r.id) + '">Editar</button>' + delBtn('race:' + r.id, 'Borrar') + '</div></div>';
     }).join('') : '<div class="empty-list">Todavía no hay raids.</div>';
   }
@@ -72,7 +72,7 @@
     const ed = e.target.closest('[data-edit-race]');
     if (ed) {
       const r = races.find(x => x.id === ed.dataset.editRace); if (!r) return;
-      editRace = r.id; $('r-name').value = r.name || ''; $('r-club').value = r.clubId || ''; $('r-date').value = r.date || ''; $('r-status').value = RSTATUS[r.status] ? r.status : '';
+      editRace = r.id; $('r-name').value = r.name || ''; $('r-club').value = r.clubId || ''; $('r-place').value = r.place || ''; $('r-km1').value = r.km1 ? String(r.km1).replace('.', ',') : ''; $('r-km2').value = r.km2 ? String(r.km2).replace('.', ',') : ''; kmTotal(); $('r-date').value = r.date || ''; $('r-status').value = RSTATUS[r.status] ? r.status : '';
       $('raid-form-title').textContent = 'Editar raid'; $('r-save').textContent = 'Guardar cambios'; $('r-cancel').hidden = false; note('r-msg', '');
       $('raid-form').scrollIntoView({ behavior: 'smooth' }); return;
     }
@@ -83,11 +83,13 @@
       try { await S.deleteRace(id); note('r-msg', 'Raid borrado, con sus llegadas y participantes.'); } catch (x) { note('r-msg', errText(x), true); }
     }
   });
-  function resetRaceForm() { editRace = null; $('raid-form').reset(); $('raid-form-title').textContent = 'Nuevo raid'; $('r-save').textContent = 'Crear raid'; $('r-cancel').hidden = true; }
+  function kmTotal() { const t = kmOf($('r-km1').value) + kmOf($('r-km2').value); $('r-kmt').textContent = t ? '= ' + fmtKm(t) : ''; }
+  ['r-km1', 'r-km2'].forEach(id => $(id).addEventListener('input', kmTotal));
+  function resetRaceForm() { editRace = null; $('raid-form').reset(); $('r-kmt').textContent = ''; $('raid-form-title').textContent = 'Nuevo raid'; $('r-save').textContent = 'Crear raid'; $('r-cancel').hidden = true; }
   $('r-cancel').addEventListener('click', () => { resetRaceForm(); note('r-msg', ''); });
   $('raid-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const data = { name: $('r-name').value.trim(), clubId: $('r-club').value, date: $('r-date').value, status: $('r-status').value };
+    const data = { name: $('r-name').value.trim(), clubId: $('r-club').value, place: $('r-place').value.trim(), km1: kmOf($('r-km1').value), km2: kmOf($('r-km2').value), date: $('r-date').value, status: $('r-status').value };
     if (!data.clubId) { note('r-msg', 'Elegí el club organizador.', true); return; }
     try { await S.saveRace(editRace, data); note('r-msg', editRace ? 'Cambios guardados.' : 'Raid creado: ' + data.name + '.'); resetRaceForm(); } catch (x) { note('r-msg', errText(x), true); }
   });

@@ -108,10 +108,10 @@ window.Store = (function () {
         const u3 = db.collection('races').doc(id).collection('participants').onSnapshot(q => { participants = list(q); emit(); }, fail);
         return () => { u1(); u2(); u3(); };
       },
-      add(t, num) {
+      add(t, num, stage) {
         if (!raceId) return null;
         const ref = arrCol().doc();
-        ref.set({ t, num: num || '', seq: Date.now() + offset + Math.random(), by: me(), at: FV.serverTimestamp() }).catch(fail);
+        ref.set({ t, num: num || '', stage: stage === 2 ? 2 : 1, seq: Date.now() + offset + Math.random(), by: me(), at: FV.serverTimestamp() }).catch(fail);
         return ref.id;
       },
       update(id, patch) { arrCol().doc(id).update(patch).catch(fail); },
@@ -162,7 +162,7 @@ window.Store = (function () {
 
   // ---------------- DEMOSTRACIÓN ----------------
   function demoStore() {
-    const KEY = 'raid-demo-v3';
+    const KEY = 'raid-demo-v5';
     const pad = n => String(n).padStart(2, '0');
     const dstr = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
     const shift = days => { const d = new Date(); d.setDate(d.getDate() + days); return dstr(d); };
@@ -176,9 +176,11 @@ window.Store = (function () {
       return {
         clubs: { c1: { name: 'Club Hípico del Este', short: 'CHE', logo: '' }, c2: { name: 'Sociedad Criolla Los Horneros', short: 'SCLH', logo: '' } },
         races: {
-          r1: { name: 'Raid de la Primavera 80 km', clubId: 'c1', date: shift(0), status: '', start1: '', participants, arrivals: offs.map(([n, s], i) => ({ id: 'e' + i, seq: i + 1, t: b + s * 1000, num: String(n), by: 'demo' })) },
-          r2: { name: 'Raid Aniversario 90 km', clubId: 'c2', date: shift(14), status: '', start1: '', participants: [], arrivals: [] },
-          r3: { name: 'Raid de Invierno 80 km', clubId: 'c1', date: shift(-21), status: '', start1: '12:30:00', participants: [], arrivals: [[27, 0], [14, 52], [8, 52], [3, 130]].map(([n, s], i) => ({ id: 'p' + i, seq: i + 1, t: past.getTime() + s * 1000, num: String(n), by: 'demo' })) }
+          r1: { name: 'Raid de la Primavera', place: 'Minas, Lavalleja', km1: 45, km2: 35, clubId: 'c1', date: shift(0), status: '', start0: '08:30:00', start1: '', participants, arrivals: offs.map(([n, s], i) => ({ id: 'e' + i, seq: i + 1, t: b + s * 1000, num: String(n), by: 'demo' })) },
+          r2: { name: 'Raid Aniversario', km1: 50, km2: 40, place: 'Sarandí Grande, Florida', clubId: 'c2', date: shift(14), status: '', start1: '', participants: [], arrivals: [] },
+          r3: { name: 'Raid de Invierno', place: 'Minas, Lavalleja', km1: 45, km2: 35, clubId: 'c1', date: shift(-21), status: '', start0: '09:00:00', start1: '13:00:00', participants: participants.filter(p => ['27', '14', '8', '3'].includes(p.num)).map(p => Object.assign({}, p, { status: 'carrera' })),
+            arrivals: [[27, 0], [14, 52], [8, 52], [3, 130]].map(([n, s], i) => ({ id: 'p' + i, stage: 1, seq: i + 1, t: past.getTime() + s * 1000, num: String(n), by: 'demo' }))
+              .concat([[14, 8410], [27, 8440], [8, 8700], [3, 9600]].map(([n, s], i) => ({ id: 'q' + i, stage: 2, seq: 10 + i, t: past.getTime() + 3300 * 1000 + s * 1000, num: String(n), by: 'demo' }))) }
         },
         staff: { 'cronometrista@ejemplo.com': { email: 'cronometrista@ejemplo.com', name: 'Cronometrista de ejemplo', clubs: ['c1'] } },
         admins: { demo: { email: 'demo' } }
@@ -215,7 +217,7 @@ window.Store = (function () {
       watchClubs: cb => sub('clubs', cb),
       watchRaces: cb => sub('races', cb),
       watch(id, cb) { raceId = id; const s = { id, cb }; subs.race.push(s); later(emit); return () => { subs.race = subs.race.filter(x => x !== s); }; },
-      add(t, num) { if (!R()) return null; const id = uid(); R().arrivals.push({ id, t, num: num || '', seq: Date.now() + Math.random(), by: 'demo' }); save(); return id; },
+      add(t, num, stage) { if (!R()) return null; const id = uid(); R().arrivals.push({ id, t, num: num || '', stage: stage === 2 ? 2 : 1, seq: Date.now() + Math.random(), by: 'demo' }); save(); return id; },
       update(id, patch) { const a = R().arrivals.find(x => x.id === id); if (a) Object.assign(a, patch); save(); },
       remove(id) { R().arrivals = R().arrivals.filter(a => a.id !== id); save(); },
       moveGroup(ids, t) { R().arrivals.forEach(a => { if (ids.includes(a.id)) a.t = t; }); save(); },

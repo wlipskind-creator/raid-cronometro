@@ -1,9 +1,9 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, groups, startList, esc, STATUS, statusOf, byNum, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML } = window.R;
+  const { hms, dur, groups, startList, esc, STATUS, statusOf, byNum, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, ofStage, fmtKmh, kmText, results, start2Of } = window.R;
   const INFO = window.APP_INFO || {};
   let data = { race: null, arrivals: [], participants: [], meta: {} }, lastUpdate = null, seenGroups = new Set(), firstRender = true;
-  let races = [], clubs = {}, current = null, unwatch = null;
+  let races = [], clubs = {}, current = null, unwatch = null, pstage = 1, all = [];
 
   R.registerSW();
   if (INFO.title) { $('app-title').textContent = INFO.title; document.title = INFO.title + ' · En vivo'; }
@@ -34,7 +34,7 @@
       h += '<div class="rsec ' + k + '"><h2><span class="dot"></span>' + titles[k] + '</h2><div class="rcards">';
       byStatus[k].forEach(r => {
         const c = clubs[r.clubId];
-        h += '<a class="rcard" href="#' + encodeURIComponent(r.id) + '">' + logoHTML(c, 48) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(c ? c.name : 'Sin club') + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + (k === 'en_curso' ? '<br><span class="badge en_curso">En vivo</span>' : '') + '</span></a>';
+        h += '<a class="rcard" href="#' + encodeURIComponent(r.id) + '">' + logoHTML(c, 48) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(clubPlace(r, c)) + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + (k === 'en_curso' ? '<br><span class="badge en_curso">En vivo</span>' : '') + '</span></a>';
       });
       h += '</div></div>';
     });
@@ -53,7 +53,7 @@
     seenGroups = new Set(); firstRender = true; lastUpdate = null;
     $('home').hidden = true; $('home').style.display = 'none';
     $('raid').hidden = false; $('raid').style.display = 'flex';
-    unwatch = S.watch(id, d => { if (d.error) return; data = Object.assign({ participants: [] }, d); lastUpdate = Date.now(); render(); });
+    unwatch = S.watch(id, d => { if (d.error) return; data = Object.assign({ participants: [] }, d); all = d.arrivals || []; data.arrivals = ofStage(all, pstage); lastUpdate = Date.now(); render(); });
     window.scrollTo(0, 0);
   }
   function close() {
@@ -70,15 +70,18 @@
     try { navigator.clipboard.writeText(url).then(ok, () => { $('share-msg').textContent = url; }); } catch (e) { $('share-msg').textContent = url; }
   });
 
+  // Pestañas: 1ª etapa y 2ª etapa usan la misma vista de llegadas
+  const TABS = ['lleg', 'larg', 'lleg2', 'res'];
   function setView(v) {
-    ['lleg', 'larg'].forEach(k => {
-      $('tab-' + k).setAttribute('aria-selected', k === v);
-      $('view-' + k).hidden = k !== v; $('view-' + k).style.display = k === v ? 'flex' : 'none';
-    });
+    const view = v === 'lleg2' ? 'lleg' : v;
+    TABS.forEach(k => $('tab-' + k).setAttribute('aria-selected', k === v));
+    ['lleg', 'larg', 'res'].forEach(k => { $('view-' + k).hidden = k !== view; $('view-' + k).style.display = k === view ? 'flex' : 'none'; });
+    const ns = v === 'lleg2' ? 2 : 1;
+    if (ns !== pstage) { pstage = ns; data.arrivals = ofStage(all, pstage); seenGroups = new Set(); firstRender = true; if (current) render(); }
     try { localStorage.setItem('raid-panel-tab', v); } catch (e) {}
   }
-  ['lleg', 'larg'].forEach(k => $('tab-' + k).addEventListener('click', () => setView(k)));
-  try { const v = localStorage.getItem('raid-panel-tab'); if (v === 'larg') setView('larg'); } catch (e) {}
+  TABS.forEach(k => $('tab-' + k).addEventListener('click', () => setView(k)));
+  try { const v = localStorage.getItem('raid-panel-tab'); if (TABS.includes(v)) setView(v); } catch (e) {}
 
   // ---------- Un raid ----------
   function render() {
@@ -89,12 +92,14 @@
     const c = clubs[race.clubId];
     $('race-logo').innerHTML = logoHTML(c, 56);
     $('race-name').textContent = race.name || 'Raid';
-    $('race-sub').textContent = (c ? c.name + ' · ' : '') + fmtDate(race.date);
+    $('race-sub').textContent = clubPlace(race, c) + ' · ' + fmtDate(race.date);
     document.title = (race.name || 'Raid') + ' · En vivo';
     const n = data.arrivals.length, conNum = data.arrivals.filter(a => a.num).length;
     const P = pMap(data.participants), parts = (data.participants || []).slice().sort(byNum);
     const arrived = new Set(data.arrivals.map(a => a.num).filter(Boolean));
-    const falta = parts.filter(p => statusOf(p) === 'carrera' && !arrived.has(p.num));
+    const in1 = new Set(ofStage(all, 1).map(a => a.num).filter(Boolean));
+    const falta = parts.filter(p => statusOf(p) === 'carrera' && !arrived.has(p.num) && (pstage === 1 || !in1.size || in1.has(p.num)));
+    $('falta-title').textContent = pstage === 2 ? 'Todavía en la 2ª etapa' : 'Todavía en carrera';
     const fuera = parts.filter(p => statusOf(p) !== 'carrera');
     $('strip').innerHTML = (n ? '<span><b class="num">' + n + '</b>llegaron</span><span><b class="num">' + gs.length + '</b>grupos</span>' : '')
       + (parts.length ? '<span><b class="num">' + falta.length + '</b>en carrera sin llegar</span>' + (fuera.length ? '<span><b class="num">' + fuera.length + '</b>abandono o retiro</span>' : '') : '')
@@ -111,7 +116,7 @@
     } else $('last').hidden = true;
 
     let h = '', pos = 0;
-    if (!gs.length) h = '<div class="table"><div class="empty-list">' + (raceStatus(race) === 'proximo' ? 'El raid todavía no empezó. ' + esc(fmtDate(race.date)) + '.' : 'Todavía no llegó ningún caballo.') + '</div></div>';
+    if (!gs.length) h = '<div class="table"><div class="empty-list">' + (raceStatus(race) === 'proximo' ? 'El raid todavía no empezó. ' + esc(fmtDate(race.date)) + '.' : 'Todavía no llegó ningún caballo a la ' + pstage + 'ª etapa.') + '</div></div>';
     gs.forEach((g, i) => {
       const fresh = !firstRender && !seenGroups.has(g.t);
       seenGroups.add(g.t);
@@ -123,13 +128,15 @@
     $('list').innerHTML = h;
     firstRender = false;
     renderStart();
+    renderRes();
   }
 
   function renderStart() {
     const race = data.race || {}, P = pMap(data.participants), now = S.now();
     const out = r => { const p = P[r.num]; return p && statusOf(p) !== 'carrera'; };
-    const rows = startList(data.arrivals, race.start1);
-    $('larg-note').textContent = race.start1 ? 'Cada caballo larga con la diferencia con que llegó. Los del mismo grupo largan juntos.' : 'La hora de largada todavía no está definida. Se muestran las diferencias.';
+    const s2 = start2Of(race, all);
+    const rows = startList(ofStage(all, 1), s2);
+    $('larg-note').textContent = s2 ? 'Cada caballo larga con la diferencia con que llegó. Los del mismo grupo largan juntos.' : 'La hora de largada todavía no está definida. Se muestran las diferencias.';
     let s = '<div class="row hd"><span>#</span><span>N°</span><span>Grupo</span><span>Diferencia</span><span>Largada</span></div>';
     if (!rows.length) s += '<div class="empty-list">Sin llegadas todavía.</div>';
     const next = rows.find(r => !out(r) && r.start !== null && r.start > now - 1000);
@@ -146,10 +153,23 @@
     } else $('next').hidden = true;
   }
 
+  function renderRes() {
+    const race = data.race || {}, res = results(all, race, data.participants), S2 = res.summary;
+    const box = (l, km, o, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(o.avg) + '</span><span class="s">promedio de ' + o.n + ' caballo' + (o.n === 1 ? '' : 's') + (o.best != null ? ' · ' + (cls ? 'ganador' : 'más rápido') + ': ' + fmtKmh(o.best) : '') + '</span></div>';
+    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : '—', S2.v1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : '—', S2.v2) + box('Raid completo', kmText(race) || '—', S2.vt, ' total');
+    let h = '<thead><tr><th>Pos.</th><th>N°</th><th>1ª etapa</th><th>2ª etapa</th><th>General</th></tr></thead><tbody>';
+    if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay resultados.</td></tr>';
+    res.rows.forEach(r => {
+      const cell = (e, v) => e != null ? dur(e) + '<span class="sub">' + fmtKmh(v) + '</span>' : '—';
+      h += '<tr class="' + (r.out ? 'out' : '') + (r.pos === 1 ? ' first' : '') + '"><td class="p">' + (r.pos ? r.pos + '°' : (r.out ? '<small style="font-size:12px">' + STATUS[statusOf(r.p)] + '</small>' : '—')) + '</td><td class="n">' + esc(r.num) + (r.p && pShort(r.p) ? '<small>' + esc(pShort(r.p)) + '</small>' : '') + '</td><td>' + cell(r.e1, r.v1) + '</td><td>' + cell(r.e2, r.v2) + '</td><td class="vt">' + (r.tot != null ? dur(r.tot) + '<span class="sub">' + fmtKmh(r.vt) + '</span>' : '—') + '</td></tr>';
+    });
+    $('restable').innerHTML = h + '</tbody>';
+  }
+
   setInterval(() => {
     if (!current) return;
     if (lastUpdate) $('updated').textContent = 'Actualizado ' + hms(lastUpdate);
-    if (data.race && data.race.start1) renderStart();
+    if (data.race && start2Of(data.race, all)) renderStart();
   }, 1000);
   route();
 })();

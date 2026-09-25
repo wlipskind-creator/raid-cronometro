@@ -6,7 +6,7 @@ service cloud.firestore {
     // Los demás administradores y todos los cronometristas se agregan desde la app,
     // en la página de Administración: ya no hace falta volver a editar estas reglas.
     function adminsIniciales() {
-      return ['admin@ejemplo.com'];
+      return ['plipskind@hotmail.com', 'jblipskind@gmail.com', 'wlipskind@gmail.com'];
     }
 
     function conSesion() { return request.auth != null && request.auth.token.email != null; }
@@ -47,7 +47,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, delete: if esAdmin();
       allow update: if esAdmin() || (esCronoDe(resource.data.clubId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['start1', 'status']));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['start0', 'start1', 'neutral', 'status']));
 
       match /arrivals/{arrivalId} {
         allow read: if true;

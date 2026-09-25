@@ -88,10 +88,86 @@ window.R = (function () {
   function pShort(p) { const n = pName(p); return n.split(' · ')[0] || ''; }
   const pMap = list => { const m = {}; (list || []).forEach(p => { m[p.num] = p; }); return m; };
 
-  function sheet(arr, start1, parts) {
+  // ---------- Etapas, tiempos y promedios ----------
+  const stageOf = a => (a && +a.stage === 2) ? 2 : 1;
+  const ofStage = (arr, st) => (arr || []).filter(a => stageOf(a) === st);
+  const kmOf = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; };
+  const speed = (km, ms) => (km > 0 && ms > 0) ? km / (ms / 3600000) : null;
+  const fmtKmh = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' km/h';
+  const fmtKm = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + ' km';
+  function kmText(r) {
+    const a = kmOf(r && r.km1), b = kmOf(r && r.km2);
+    if (!a && !b) return '';
+    return fmtKm(a + b) + (a && b ? ' (' + fmtKm(a).replace(' km', '') + ' + ' + fmtKm(b) + ')' : '');
+  }
+  // Neutralización en minutos (por defecto 1 hora)
+  const neutralOf = race => { const n = parseFloat(race && race.neutral); return isFinite(n) && n >= 0 ? n : 60; };
+  // Hora de largada del 1° en la 2ª etapa: la que se cargó a mano o, si no, llegada del 1° + neutralización.
+  function start2Of(race, all) {
+    const a1 = ofStage(all, 1);
+    if (race && race.start1) return race.start1;
+    if (!a1.length) return '';
+    return hms(Math.min.apply(null, a1.map(a => a.t)) + neutralOf(race) * 60000);
+  }
+  // Resultados por caballo: tiempo y velocidad de cada etapa y del raid (sin contar la neutralización).
+  // 2ª etapa: se mide desde la largada del primero (llegada del 1° en la 1ª + neutralización), para todos.
+  function results(all, race, parts) {
+    race = race || {};
+    const km1 = kmOf(race.km1), km2 = kmOf(race.km2);
+    const a1 = ofStage(all, 1), a2 = ofStage(all, 2);
+    const start0 = baseStart(race.start0, a1);
+    const s2 = start2Of(race, all), start2 = baseStart(s2, a1);
+    const first1 = a1.length ? Math.min.apply(null, a1.map(a => a.t)) : null;
+    const rest = (start2 !== null && first1 !== null) ? start2 - first1 : null;
+    const t1 = {}, t2 = {};
+    sorted(a1).forEach(a => { if (a.num && !(a.num in t1)) t1[a.num] = a; });
+    sorted(a2).forEach(a => { if (a.num && !(a.num in t2)) t2[a.num] = a; });
     const pm = pMap(parts);
-    const L = ['Orden\tN°\tCaballo / Jinete\tGrupo\tLlegada\tDif. 1°\tLargada 2ª'];
-    startList(arr, start1).forEach(r => L.push([r.pos, r.num || '?', pName(pm[r.num]), 'G' + r.group, hms(r.arrive), '+' + dur(r.off), r.start !== null ? hms(r.start) : ''].join('\t')));
+    const nums = new Set([...Object.keys(t1), ...Object.keys(t2)]);
+    const rows = [...nums].map(num => {
+      const e1 = (t1[num] && start0 !== null) ? t1[num].t - start0 : null;
+      const e2 = (t2[num] && start2 !== null) ? t2[num].t - start2 : null;
+      // Tiempo total neto: de la largada de la 1ª a la llegada de la 2ª, menos la neutralización.
+      const tot = (t2[num] && start0 !== null && rest !== null) ? t2[num].t - start0 - rest : null;
+      const p = pm[num];
+      return { num, p, out: p ? statusOf(p) !== 'carrera' : false, arr1: t1[num] ? t1[num].t : null, arr2: t2[num] ? t2[num].t : null,
+        e1, e2, tot, v1: speed(km1, e1), v2: speed(km2, e2), vt: speed(km1 + km2, tot), seq2: t2[num] ? (t2[num].seq || 0) : 0 };
+    });
+    // Orden: los que terminaron la 2ª etapa por llegada; después el resto por su llegada a la 1ª.
+    rows.sort((x, y) => {
+      if (x.arr2 != null && y.arr2 != null) return x.arr2 - y.arr2 || x.seq2 - y.seq2;
+      if (x.arr2 != null) return -1; if (y.arr2 != null) return 1;
+      return (x.arr1 || 0) - (y.arr1 || 0);
+    });
+    let pos = 0; rows.forEach(r => { r.pos = (r.arr2 != null && !r.out) ? ++pos : null; });
+    const avg = l => { const v = l.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const ok = rows.filter(r => !r.out);
+    const win = rows.find(r => r.pos === 1) || null;
+    const fast1 = ok.filter(r => r.v1 != null).sort((a, b) => a.e1 - b.e1)[0] || null;
+    return {
+      rows, km1, km2, start0, hasStart0: start0 !== null, start2, rest,
+      summary: {
+        v1: { best: fast1 ? fast1.v1 : null, avg: avg(ok.map(r => r.v1)), n: ok.filter(r => r.v1 != null).length },
+        v2: { best: (() => { const b = ok.filter(r => r.v2 != null).sort((a, b) => a.e2 - b.e2)[0]; return b ? b.v2 : null; })(), avg: avg(ok.map(r => r.v2)), n: ok.filter(r => r.v2 != null).length },
+        vt: { best: win ? win.vt : null, avg: avg(ok.map(r => r.vt)), n: ok.filter(r => r.vt != null).length },
+        winner: win
+      }
+    };
+  }
+
+  function sheet(all, race, parts) {
+    race = race || {};
+    const pm = pMap(parts);
+    const a1 = ofStage(all, 1);
+    const L = ['LLEGADAS 1ª ETAPA Y LARGADA 2ª', 'Orden\tN°\tCaballo / Jinete\tGrupo\tLlegada\tDif. 1°\tLargada 2ª'];
+    startList(a1, start2Of(race, all)).forEach(r => L.push([r.pos, r.num || '?', pName(pm[r.num]), 'G' + r.group, hms(r.arrive), '+' + dur(r.off), r.start !== null ? hms(r.start) : ''].join('\t')));
+    const res = results(all, race, parts);
+    if (res.rows.length) {
+      L.push(''); L.push('RESULTADOS' + (res.km1 || res.km2 ? ' · ' + kmText(race) : ''));
+      L.push('Puesto\tN°\tCaballo / Jinete\tTiempo 1ª\tProm. 1ª (km/h)\tTiempo 2ª\tProm. 2ª (km/h)\tTiempo total\tProm. general (km/h)');
+      const n = v => v == null ? '' : v.toFixed(2).replace('.', ',');
+      res.rows.forEach(r => L.push([r.pos || (r.out ? STATUS[statusOf(r.p)] : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)].join('\t')));
+    }
     const out = (parts || []).filter(p => statusOf(p) !== 'carrera').sort(byNum);
     if (out.length) { L.push(''); L.push('N°\tCaballo / Jinete\tEstado'); out.forEach(p => L.push([p.num, pName(p), STATUS[statusOf(p)]].join('\t'))); }
     return L.join('\n');
@@ -124,6 +200,8 @@ window.R = (function () {
       return sa === 'terminado' ? dbb.localeCompare(da) : da.localeCompare(dbb);
     });
   }
+  // "Club · Localidad" para mostrar debajo del nombre del raid
+  function clubPlace(r, c) { const k = kmOf(r && r.km1) + kmOf(r && r.km2); return [c ? c.name : '', r && r.place ? r.place : '', k ? fmtKm(k) : ''].filter(Boolean).join(' · ') || 'Sin club'; }
   function initials(name) { return String(name || '?').split(/\s+/).filter(w => w.length > 2 || /^[A-ZÁÉÍÓÚÑ]/.test(w)).slice(0, 3).map(w => w[0]).join('').toUpperCase() || '?'; }
   function logoHTML(club, size) {
     size = size || 40;
@@ -139,5 +217,6 @@ window.R = (function () {
   }
   return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, sheet, esc, registerSW,
     STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap,
-    RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials };
+    RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
+    stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of };
 })();

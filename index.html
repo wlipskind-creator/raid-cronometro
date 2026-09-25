@@ -25,7 +25,7 @@
       </div>
     </div>
     <div id="races" style="display:flex;flex-direction:column;gap:20px"><div class="table"><div class="empty-list">Cargando raids…</div></div></div>
-    <p class="foot"><a href="carga.html">Ingreso de cronometristas</a></p>
+    <p class="foot">Se actualiza solo, no hace falta recargar.</p>
   </section>
 
   <!-- UN RAID -->
@@ -49,8 +49,10 @@
 
     <div class="actions" style="justify-content:space-between">
       <div class="tabs" role="tablist">
-        <button id="tab-lleg" role="tab" aria-selected="true">Llegadas 1ª etapa</button>
-        <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª etapa</button>
+        <button id="tab-lleg" role="tab" aria-selected="true">1ª etapa</button>
+        <button id="tab-larg" role="tab" aria-selected="false">Largada 2ª</button>
+        <button id="tab-lleg2" role="tab" aria-selected="false">2ª etapa</button>
+        <button id="tab-res" role="tab" aria-selected="false">Resultados</button>
       </div>
       <button class="ghost" id="share">Copiar link de este raid</button>
     </div>
@@ -60,7 +62,7 @@
       <div class="last" id="last" hidden></div>
       <div class="pgrid groups" id="list"></div>
       <div id="rest" hidden style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
-        <h2 style="font-size:22px">Todavía en carrera</h2>
+        <h2 style="font-size:22px" id="falta-title">Todavía en carrera</h2>
         <div class="outlist" id="falta"></div>
         <div id="fuera-wrap" hidden style="display:flex;flex-direction:column;gap:10px">
           <h2 style="font-size:22px">Abandonos y retirados</h2>
@@ -69,13 +71,19 @@
       </div>
     </section>
 
+    <section id="view-res" hidden style="flex-direction:column;gap:10px">
+      <div class="resum" id="resum"></div>
+      <div class="rtable-wrap"><table class="rtable num" id="restable"></table></div>
+      <p class="foot">Tiempos netos de cada etapa, sin contar la neutralización. Promedio = kilómetros de la etapa divididos por el tiempo.</p>
+    </section>
+
     <section id="view-larg" hidden style="flex-direction:column;gap:10px">
       <div class="nextcard" id="next" hidden></div>
       <p class="foot" id="larg-note"></p>
       <div class="table" id="startlist"></div>
     </section>
 
-    <p class="foot">Se actualiza solo, no hace falta recargar. <a href="carga.html">Ingreso de cronometristas</a></p>
+    <p class="foot">Se actualiza solo, no hace falta recargar.</p>
   </section>
 </div>
 

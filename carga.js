@@ -1,11 +1,15 @@
 (function () {
   const S = window.Store, $ = id => document.getElementById(id);
-  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML } = window.R;
+  const { hms, dur, sec, groups, sorted, startList, sheet, esc, STATUS, statusOf, numKey, byNum, parseTable, toParticipants, pName, pShort, pMap, RSTATUS, raceStatus, fmtDate, sortRaces, logoHTML, clubPlace, stageOf, ofStage, fmtKmh, kmText, results, neutralOf, start2Of } = window.R;
   let data = { raceId: null, race: null, arrivals: [], participants: [], meta: {} };
   let buf = '', sel = null, view = 'lleg', online = navigator.onLine;
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   let rol = lsGet('raid-rol') || 'completo';
+  let stage = +(lsGet('raid-stage') || 1) === 2 ? 2 : 1;
+  // Todas las llegadas del raid en data.all; en data.arrivals solo las de la etapa que se está cargando.
+  function setData(d) { data = Object.assign({ participants: [] }, d); data.all = d.arrivals || []; data.arrivals = ofStage(data.all, stage); render(); }
+  const addA = (t, n) => S.add(t, n, stage);
 
   R.registerSW();
   if (S.mode === 'demo') $('demo-banner').hidden = false;
@@ -57,7 +61,7 @@
       const l = mine.filter(r => raceStatus(r) === k); if (!l.length) return;
       h += '<div class="rsec ' + k + '"><h2><span class="dot"></span>' + titles[k] + '</h2><div class="rcards">';
       l.forEach(r => { const c = clubs[r.clubId];
-        h += '<button class="rcard' + (r.id === raceSel ? ' sel' : '') + '" data-race="' + esc(r.id) + '">' + logoHTML(c, 44) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(c ? c.name : 'Sin club') + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + '</span></button>'; });
+        h += '<button class="rcard' + (r.id === raceSel ? ' sel' : '') + '" data-race="' + esc(r.id) + '">' + logoHTML(c, 44) + '<span><span class="rn">' + esc(r.name || 'Raid') + '</span><span class="rc">' + esc(clubPlace(r, c)) + '</span></span><span class="rd">' + esc(fmtDate(r.date)) + '</span></button>'; });
       h += '</div></div>';
     });
     if (!h) h = '<div class="card"><p>' + (acc.admin ? 'Todavía no hay raids. Crealos en <b>Administración</b>.' : (acc.clubs.length ? 'Tu club todavía no tiene raids cargados. Los crea la FEU.' : (acc.offline ? 'Sin señal: no se pudo comprobar tu usuario. Probá de nuevo con conexión.' : 'Tu usuario todavía no está asignado a ningún club. Pedile a la FEU que te habilite.'))) + '</p></div>';
@@ -68,9 +72,9 @@
   function choose(id) {
     if (unwatch) unwatch();
     raceSel = id; lsSet('raid-sel', id);
-    data = { raceId: id, race: null, arrivals: [], participants: [], meta: { fromCache: true } };
+    data = { raceId: id, race: null, arrivals: [], all: [], participants: [], meta: { fromCache: true } };
     sel = null; buf = ''; msg('');
-    unwatch = S.watch(id, d => { if (d.error) return; data = Object.assign({ participants: [] }, d); render(); });
+    unwatch = S.watch(id, d => { if (d.error) return; setData(d); });
     show('app'); setView('lleg');
     if (!ticking) { ticking = true; setInterval(tick, 250); tick(); }
   }
@@ -124,6 +128,14 @@
   document.querySelectorAll('[data-rol]').forEach(b => b.addEventListener('click', () => { rol = b.dataset.rol; lsSet('raid-rol', rol); buf = ''; msg(''); applyRol(); render(); }));
   applyRol();
 
+  // ---------- Etapa ----------
+  function applyStage() { document.querySelectorAll('[data-stage]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.stage === stage)); }
+  document.querySelectorAll('[data-stage]').forEach(b => b.addEventListener('click', () => {
+    stage = +b.dataset.stage; lsSet('raid-stage', String(stage)); sel = null; buf = ''; msg('');
+    data.arrivals = ofStage(data.all, stage); applyStage(); render();
+  }));
+  applyStage();
+
   // ---------- LLEGÓ ----------
   function mark() {
     if (rol === 'planillero') return;
@@ -132,8 +144,8 @@
     if (!data.race) { msg('Esperando los datos del raid…', true); return; }
     if (buf && rol === 'completo' && !pending().length && !validSel()) {
       const c = check(buf, null); msg(c.text, c.warn);
-      S.add(t, buf); buf = '';
-    } else { S.add(t, ''); msg(''); }
+      addA(t, buf); buf = '';
+    } else { addA(t, ''); msg(''); }
     buzz(); render();
   }
   $('mark').addEventListener('pointerdown', e => { e.preventDefault(); mark(); });
@@ -147,8 +159,8 @@
   }
   $('same').addEventListener('click', () => {
     const t = sameGroupTime(); if (t === null) return;
-    if (buf && rol === 'completo') { const c = check(buf, null); msg(c.text, c.warn); S.add(t, buf); buf = ''; }
-    else { S.add(t, ''); msg(''); }
+    if (buf && rol === 'completo') { const c = check(buf, null); msg(c.text, c.warn); addA(t, buf); buf = ''; }
+    else { addA(t, ''); msg(''); }
     sel = null; buzz(); render();
   });
 
@@ -182,7 +194,7 @@
       if (rol === 'planillero') { buf = ''; msg('No hay llegadas sin número. Esperá a que el marcador toque LLEGÓ.', true); return; }
       buf = n; msg('N° ' + n + ' listo: tocá LLEGÓ cuando cruce.'); return;
     }
-    if (t.k === 'g') { const c = check(n, null); msg(c.text ? c.text + ' · agregado al grupo' : 'Agregado al grupo.', c.warn); S.add(t.t, n); buf = ''; return; }
+    if (t.k === 'g') { const c = check(n, null); msg(c.text ? c.text + ' · agregado al grupo' : 'Agregado al grupo.', c.warn); addA(t.t, n); buf = ''; return; }
     const c = check(n, t.a.id); msg(c.text, c.warn);
     S.update(t.a.id, { num: n }); t.a.num = n; buf = ''; sel = null;
   }
@@ -275,7 +287,8 @@
   });
 
   function arrivedMap() {
-    const m = {}; groups(data.arrivals).forEach((g, i) => g.horses.forEach(a => { if (a.num) m[a.num] = { t: g.t, g: i + 1 }; })); return m;
+    const m = {}; groups(ofStage(data.all, 1)).forEach((g, i) => g.horses.forEach(a => { if (a.num) m[a.num] = { t: g.t, g: i + 1 }; }));
+    groups(ofStage(data.all, 2)).forEach((g, i) => g.horses.forEach(a => { if (a.num && m[a.num]) m[a.num].t2 = g.t; })); return m;
   }
   function renderParts() {
     const list = parts().slice().sort(byNum), am = arrivedMap();
@@ -292,7 +305,7 @@
     shown.forEach(p => {
       const st = statusOf(p), a = am[p.num];
       const extra = Object.keys(p.data || {}).filter(k => !/caballo|equino|animal|nombre|jinete|binomio|corredor|piloto/i.test(k)).map(k => p.data[k]).join(' · ');
-      h += '<div class="prow st-' + st + '"><span class="pn2 num">' + esc(p.num) + '</span><span class="pi"><b>' + (esc(pName(p)) || '—') + '</b>' + (extra ? '<small>' + esc(extra) + '</small>' : '') + (a ? '<small class="arr num">Llegó ' + hms(a.t) + ' · Grupo ' + a.g + '</small>' : '') + '</span>';
+      h += '<div class="prow st-' + st + '"><span class="pn2 num">' + esc(p.num) + '</span><span class="pi"><b>' + (esc(pName(p)) || '—') + '</b>' + (extra ? '<small>' + esc(extra) + '</small>' : '') + (a ? '<small class="arr num">1ª: llegó ' + hms(a.t) + ' · Grupo ' + a.g + (a.t2 ? ' · 2ª: llegó ' + hms(a.t2) : '') + '</small>' : '') + '</span>';
       h += '<select data-num="' + esc(p.num) + '" aria-label="Estado del N° ' + esc(p.num) + '">' + Object.keys(STATUS).map(k => '<option value="' + k + '"' + (k === st ? ' selected' : '') + '>' + STATUS[k] + '</option>').join('') + '</select></div>';
     });
     if (document.activeElement && document.activeElement.closest && document.activeElement.closest('#plist')) return; // no redibujar mientras eligen un estado
@@ -301,14 +314,16 @@
 
   // ---------- Carrera ----------
   $('start1').addEventListener('change', e => S.setRace({ start1: e.target.value }));
+  $('start0').addEventListener('change', e => S.setRace({ start0: e.target.value }));
+  $('neutral').addEventListener('change', e => { const v = e.target.value === '' ? 60 : Math.max(0, parseInt(e.target.value, 10) || 0); S.setRace({ neutral: v }); });
   $('race-status').addEventListener('change', e => S.setRace({ status: e.target.value }));
   $('copy').addEventListener('click', () => {
-    const txt = sheet(data.arrivals, data.race && data.race.start1, parts()), box = $('copybox');
+    const txt = sheet(data.all, data.race, parts()), box = $('copybox');
     const fb = () => { box.hidden = false; box.value = txt; box.select(); $('msg2').textContent = 'Seleccioná el texto y copialo.'; };
     try { navigator.clipboard.writeText(txt).then(() => { $('msg2').textContent = 'Planilla copiada. Se puede pegar en Excel o WhatsApp.'; }, fb); } catch (e) { fb(); }
   });
 
-  const VIEWS = ['lleg', 'larg', 'part', 'carr'];
+  const VIEWS = ['lleg', 'larg', 'res', 'part', 'carr'];
   function setView(v) {
     view = v;
     VIEWS.forEach(k => {
@@ -324,16 +339,20 @@
     const race = data.race || {}, gs = groups(data.arrivals), pend = pending(), t = target(), P = pm();
     const club = clubs[race.clubId], gone = !data.race && !data.meta.fromCache;
     $('race-logo').innerHTML = data.race ? logoHTML(club, 36) : '';
-    $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>' + esc(club ? club.name : 'Cronometristas') + ' · ' + esc(fmtDate(race.date)) + '</small>';
+    $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>' + esc(data.race ? clubPlace(race, club) : 'Cronometristas') + ' · ' + esc(fmtDate(race.date)) + '</small>';
     $('norace').hidden = !gone;
     $('done-banner').hidden = !(data.race && raceStatus(data.race) === 'terminado');
     $('mark').disabled = gone;
     $('carr-logo').innerHTML = logoHTML(club, 48);
     $('carr-name').textContent = race.name || 'Raid';
-    $('carr-sub').textContent = (club ? club.name + ' · ' : '') + fmtDate(race.date) + ' · ' + RSTATUS[raceStatus(race)];
+    $('carr-sub').textContent = clubPlace(race, club) + ' · ' + fmtDate(race.date) + ' · ' + RSTATUS[raceStatus(race)];
     if (document.activeElement !== $('race-status')) $('race-status').value = RSTATUS[race.status] ? race.status : '';
     $('public-link').href = 'index.html#' + encodeURIComponent(data.raceId || '');
     if (document.activeElement !== $('start1')) $('start1').value = race.start1 || '';
+    if (document.activeElement !== $('start0')) $('start0').value = race.start0 || '';
+    if (document.activeElement !== $('neutral')) $('neutral').value = neutralOf(race);
+    { const a1 = ofStage(data.all, 1), auto = a1.length ? hms(Math.min.apply(null, a1.map(a => a.t)) + neutralOf(race) * 60000) : '';
+      $('start1-auto').textContent = race.start1 ? 'Cargada a mano. Si la borrás, se calcula sola' + (auto ? ': ' + auto + '.' : '.') : (auto ? 'Calculada sola: ' + auto + ' (llegada del 1° + ' + neutralOf(race) + ' min). Solo cargala si querés cambiarla.' : 'Se calcula sola cuando llega el primero de la 1ª etapa: su llegada + ' + neutralOf(race) + ' min.'); }
     $('buf').textContent = buf || '000'; $('buf').classList.toggle('empty', !buf);
 
     let tg;
@@ -346,11 +365,13 @@
     const st = sameGroupTime();
     $('same').disabled = st === null;
     $('same-sub').textContent = st === null ? 'Primero marcá una llegada' : 'Suma un caballo al Grupo ' + (gs.findIndex(g => g.t === st) + 1) + ' (' + hms(st) + ')';
-    $('count').textContent = data.arrivals.length ? data.arrivals.length + ' caballos · ' + gs.length + ' grupos' : '';
+    $('count').textContent = (data.arrivals.length ? data.arrivals.length + ' caballos · ' + gs.length + ' grupos' : '') + ' · ' + stage + 'ª etapa';
 
     // Panel de números: solo en carrera y sin llegar; filtrado por lo que se va tecleando
     const arrived = new Set(data.arrivals.map(a => a.num).filter(Boolean));
-    const avail = parts().filter(p => statusOf(p) === 'carrera' && !arrived.has(p.num)).sort(byNum);
+    const in1 = new Set(ofStage(data.all, 1).map(a => a.num).filter(Boolean));
+    // En la 2ª etapa solo corren los que llegaron en la 1ª
+    const avail = parts().filter(p => statusOf(p) === 'carrera' && !arrived.has(p.num) && (stage === 1 || !in1.size || in1.has(p.num))).sort(byNum);
     $('tiles-wrap').hidden = !parts().length;
     const filt = buf ? avail.filter(p => String(p.num).startsWith(buf)) : avail;
     $('tiles-title').innerHTML = '<b class="num">' + avail.length + '</b> en carrera sin llegar' + (buf ? ' · empiezan con ' + esc(buf) : '');
@@ -358,7 +379,7 @@
       : '<div class="none">' + (avail.length ? 'Ningún caballo en carrera empieza con ' + esc(buf) + '. Si igual es ese número, tocá OK.' : 'Ya llegaron todos los caballos en carrera.') + '</div>';
 
     let h = '', pos = 0; const f = gs[0];
-    if (!gs.length) h = '<div class="table"><div class="empty-list">Todavía no llegó ningún caballo.</div></div>';
+    if (!gs.length) h = '<div class="table"><div class="empty-list">Todavía no llegó ningún caballo a la ' + stage + 'ª etapa.</div></div>';
     gs.forEach((g, i) => {
       const gSel = sel && sel.k === 'g' && sel.t === g.t;
       const diff = i === 0 ? '1°' : '+' + dur(g.t - f.t), dprev = i === 0 ? '' : '+' + dur(g.t - gs[i - 1].t) + ' del anterior';
@@ -375,7 +396,7 @@
     if (!(document.activeElement && document.activeElement.id === 'edit-time')) $('list').innerHTML = h;
 
     // Largada: los que abandonaron o se retiraron figuran tachados y no largan
-    const rows = startList(data.arrivals, race.start1);
+    const rows = startList(ofStage(data.all, 1), start2Of(race, data.all));
     let s = '<div class="row hd"><span>#</span><span>N°</span><span>Grupo</span><span>Diferencia</span><span>Largada</span></div>';
     if (!rows.length) s += '<div class="empty-list">Sin llegadas todavía.</div>';
     rows.forEach(r => {
@@ -384,6 +405,26 @@
     });
     $('startlist').innerHTML = s;
     renderParts();
+    renderRes();
+  }
+
+  // ---------- Resultados ----------
+  function renderRes() {
+    const race = data.race || {}, res = results(data.all, race, parts()), S2 = res.summary;
+    const box = (l, km, o, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(o.avg) + '</span><span class="s">promedio de ' + o.n + ' caballo' + (o.n === 1 ? '' : 's') + (o.best != null ? ' · ' + (cls ? 'ganador' : 'más rápido') + ': ' + fmtKmh(o.best) : '') + '</span></div>';
+    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : 'sin km', S2.v1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : 'sin km', S2.v2) + box('Raid completo', kmText(race) || 'sin km', S2.vt, ' total');
+    const warn = [];
+    if (!res.km1 || !res.km2) warn.push('Faltan los kilómetros de cada etapa: los carga la FEU en Administración → Raids.');
+    if (!res.hasStart0) warn.push('Falta la hora de largada de la 1ª etapa (pestaña Largada).');
+    if (res.start2 === null) warn.push('Todavía no llegó ningún caballo a la 1ª etapa: la largada de la 2ª se calcula con la llegada del primero.');
+    $('res-warn').hidden = !warn.length; $('res-warn').innerHTML = warn.map(esc).join('<br>');
+    let h = '<thead><tr><th>Pos.</th><th>N°</th><th>1ª etapa</th><th>2ª etapa</th><th>General</th></tr></thead><tbody>';
+    if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay llegadas.</td></tr>';
+    res.rows.forEach(r => {
+      const cell = (e, v) => e != null ? dur(e) + '<span class="sub">' + fmtKmh(v) + '</span>' : '—';
+      h += '<tr class="' + (r.out ? 'out' : '') + (r.pos === 1 ? ' first' : '') + '"><td class="p">' + (r.pos ? r.pos + '°' : (r.out ? '<small style="font-size:12px">' + STATUS[statusOf(r.p)] + '</small>' : '—')) + '</td><td class="n">' + esc(r.num) + (r.p && pShort(r.p) ? '<small>' + esc(pShort(r.p)) + '</small>' : '') + '</td><td>' + cell(r.e1, r.v1) + '</td><td>' + cell(r.e2, r.v2) + '</td><td class="vt">' + (r.tot != null ? dur(r.tot) + '<span class="sub">' + fmtKmh(r.vt) + '</span>' : '—') + '</td></tr>';
+    });
+    $('restable').innerHTML = h + '</tbody>';
   }
 
   function tick() {

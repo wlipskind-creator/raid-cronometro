@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1D6A43">
 <title>Raid · Cronometristas</title>
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest-carga.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="app.css">
@@ -45,6 +45,7 @@
     <div class="tabs" role="tablist">
       <button id="tab-lleg" role="tab" aria-selected="true">Llegadas</button>
       <button id="tab-larg" role="tab" aria-selected="false">Largada</button>
+      <button id="tab-res" role="tab" aria-selected="false">Resultados</button>
       <button id="tab-part" role="tab" aria-selected="false">Participantes</button>
       <button id="tab-carr" role="tab" aria-selected="false">Carrera</button>
     </div>
@@ -54,6 +55,11 @@
 
     <!-- LLEGADAS -->
     <section id="view-lleg" style="display:flex;flex-direction:column;gap:14px">
+      <div class="roles" role="group" aria-label="Etapa">
+        <span class="lbl">Etapa</span>
+        <button data-stage="1" aria-pressed="true">1ª etapa</button>
+        <button data-stage="2" aria-pressed="false">2ª etapa</button>
+      </div>
       <div class="roles" role="group" aria-label="Mi rol">
         <span class="lbl">Mi rol</span>
         <button data-rol="completo" aria-pressed="true">Completo</button>
@@ -90,11 +96,23 @@
     <!-- LARGADA -->
     <section id="view-larg" hidden style="flex-direction:column;gap:14px">
       <div class="card">
-        <h2>Largada 2ª etapa</h2>
-        <p>Cada caballo larga con la diferencia con que llegó detrás del primero. Los de un mismo grupo largan juntos.</p>
-        <div class="field"><label for="start1">Hora de largada del 1°</label><input id="start1" type="time" step="1" class="num"></div>
+        <h2>Largadas</h2>
+        <div class="field"><label for="start0">Hora de largada de la 1ª etapa</label><input id="start0" type="time" step="1" class="num">
+          <p class="foot" style="font-size:13px">Se usa para calcular el tiempo y el promedio de la 1ª etapa.</p></div>
+        <div class="field"><label for="neutral">Neutralización (minutos)</label><input id="neutral" type="number" min="0" step="1" inputmode="numeric" class="num" placeholder="60" style="max-width:8em"></div>
+        <div class="field"><label for="start1">Hora de largada del 1° en la 2ª etapa</label><input id="start1" type="time" step="1" class="num">
+          <p class="foot" style="font-size:13px" id="start1-auto">Se calcula sola: llegada del 1° en la 1ª etapa + neutralización. Solo cargala si querés cambiarla.</p></div>
+        <p>En la 2ª etapa cada caballo larga con la diferencia con que llegó detrás del primero. Los de un mismo grupo largan juntos.</p>
       </div>
       <div class="table" id="startlist"></div>
+    </section>
+
+    <!-- RESULTADOS -->
+    <section id="view-res" hidden style="flex-direction:column;gap:14px">
+      <div class="resum" id="resum"></div>
+      <div class="banner" id="res-warn" hidden></div>
+      <div class="rtable-wrap"><table class="rtable num" id="restable"></table></div>
+      <p class="foot">Tiempos netos de cada etapa, sin contar la neutralización. El promedio es la velocidad en km/h: kilómetros de la etapa divididos por el tiempo.</p>
     </section>
 
     <!-- PARTICIPANTES -->

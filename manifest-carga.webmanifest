@@ -1,7 +1,7 @@
 {
-  "name": "Raids FEU · En vivo",
-  "short_name": "Raids FEU",
-  "start_url": "./",
+  "name": "Raids FEU · Cronometristas",
+  "short_name": "Cronómetro",
+  "start_url": "carga.html",
   "display": "standalone",
   "background_color": "#EBEFEC",
   "theme_color": "#1D6A43",
