@@ -32,6 +32,35 @@ window.R = (function () {
     }));
     return out;
   }
+  // Nombre del grupo de largada: el primero es "1°", los demás llevan el número del grupo de llegada
+  const gLabel = g => g === 1 ? '1°' : 'Grupo ' + g;
+  // Tabla de largada agrupada: un encabezado por grupo (misma hora de salida) y debajo sus caballos.
+  // P: participantes por número; o.now: hora actual para marcar lo que ya largó y el próximo grupo.
+  function startTableHTML(rows, P, o) {
+    o = o || {};
+    if (!rows.length) return '<div class="empty-list">Sin llegadas todavía.</div>';
+    const byG = []; rows.forEach(r => { const last = byG[byG.length - 1]; if (last && last.g === r.group) last.rows.push(r); else byG.push({ g: r.group, rows: [r] }); });
+    const inRace = r => !isOut(P[r.num]);
+    const next = o.now != null ? byG.find(G => G.rows.some(inRace) && G.rows[0].start !== null && G.rows[0].start > o.now - 1000) : null;
+    let s = '';
+    byG.forEach((G, gi) => {
+      const r0 = G.rows[0], n = G.rows.filter(inRace).length;
+      const prev = gi ? byG[gi - 1].rows[0] : null; // diferencia con el grupo anterior: lo que falta para largar
+      const past = o.now != null && r0.start !== null && r0.start < o.now - 1000;
+      const cls = !n || past ? ' past' : (next === G ? ' next' : '');
+      s += '<div class="sgroup' + cls + '"><div class="sghd"><span class="sgl">' + gLabel(G.g) + '</span>'
+        + '<span class="sgd num">' + (prev ? '<b>+' + dur(r0.arrive - prev.arrive) + '</b> después del anterior' : 'Larga primero') + ' · ' + n + ' larga' + (n === 1 ? '' : 'n') + '</span>'
+        + '<span class="sgh num">' + (r0.start !== null ? hms(r0.start) : '—') + '</span></div>';
+      G.rows.forEach(r => {
+        const p = P[r.num], out = isOut(p);
+        s += '<div class="srow' + (r.num ? '' : ' pending') + (out ? ' out' : '') + '"><span class="n num">' + (esc(r.num) || '?') + '</span>'
+          + '<span class="nm">' + (p && pShort(p) ? tagHTML(p) : '') + '</span>'
+          + '<span class="st">' + (out ? outLabel(p) : 'llegó ' + hms(r.arrive)) + '</span></div>';
+      });
+      s += '</div>';
+    });
+    return s;
+  }
 
   // ---------- Participantes ----------
   const STATUS = { carrera: 'En carrera', abandono: 'Abandono', retirado: 'Retirado', descalificado: 'Descalificado' };
@@ -200,8 +229,8 @@ window.R = (function () {
     race = race || {};
     const pm = pMap(parts);
     const a1 = ofStage(all, 1);
-    const L = ['LLEGADAS 1ª ETAPA Y LARGADA 2ª', 'Orden\tN°\tCaballo / Jinete\tGrupo\tLlegada\tDif. 1°\tLargada 2ª'];
-    startList(a1, start2Of(race, all)).forEach(r => L.push([r.pos, r.num || '?', pName(pm[r.num]), 'G' + r.group, hms(r.arrive), '+' + dur(r.off), r.start !== null ? hms(r.start) : ''].join('\t')));
+    const L = ['LLEGADAS 1ª ETAPA Y LARGADA 2ª', 'Orden\tN°\tCaballo / Jinete\tGrupo\tLlegada\tDif. anterior\tDif. 1°\tLargada 2ª'];
+    startList(a1, start2Of(race, all)).forEach((r, i, A) => L.push([r.pos, r.num || '?', pName(pm[r.num]), gLabel(r.group), hms(r.arrive), i ? '+' + dur(r.arrive - A[i - 1].arrive) : '', '+' + dur(r.off), r.start !== null ? hms(r.start) : ''].join('\t')));
     const res = results(all, race, parts);
     if (res.rows.length) {
       L.push(''); L.push('RESULTADOS' + (res.km1 || res.km2 ? ' · ' + kmText(race) : ''));
@@ -386,7 +415,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, sheet, esc, registerSW,
+  return { pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

@@ -442,13 +442,7 @@
 
     // Largada: los que abandonaron o se retiraron figuran tachados y no largan
     const rows = startList(ofStage(data.all, 1), start2Of(race, data.all));
-    let s = '<div class="row hd"><span>#</span><span>N°</span><span>Grupo</span><span>Diferencia</span><span>Largada</span></div>';
-    if (!rows.length) s += '<div class="empty-list">Sin llegadas todavía.</div>';
-    rows.forEach(r => {
-      const p = P[r.num], out = isOut(p);
-      s += '<div class="row' + (r.num ? '' : ' pending') + (out ? ' past' : '') + '"><span class="pos num">' + r.pos + '</span><span class="n num">' + (esc(r.num) || '?') + (p && pShort(p) ? '<small>' + tagHTML(p) + '</small>' : '') + '</span><span class="g">G' + r.group + '</span><span class="d num">' + (r.off ? '+' + dur(r.off) : '—') + '</span><span class="h num">' + (out ? '<small style="font-size:13px">' + outLabel(p) + '</small>' : (r.start !== null ? hms(r.start) : '—')) + '</span></div>';
-    });
-    $('startlist').innerHTML = s;
+    $('startlist').innerHTML = window.R.startTableHTML(rows, P);
     renderParts();
     renderRes();
     renderVet();

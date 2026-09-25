@@ -139,19 +139,13 @@
     const s2 = start2Of(race, all);
     const rows = startList(ofStage(all, 1), s2);
     $('larg-note').textContent = s2 ? 'Cada caballo larga con la diferencia con que llegó. Los del mismo grupo largan juntos.' : 'La hora de largada todavía no está definida. Se muestran las diferencias.';
-    let s = '<div class="row hd"><span>#</span><span>N°</span><span>Grupo</span><span>Diferencia</span><span>Largada</span></div>';
-    if (!rows.length) s += '<div class="empty-list">Sin llegadas todavía.</div>';
     const next = rows.find(r => !out(r) && r.start !== null && r.start > now - 1000);
-    rows.forEach(r => {
-      const o = out(r), p = P[r.num];
-      const cls = o || (r.start !== null && r.start < now - 1000) ? ' past' : (next && r.start === next.start ? ' next' : '');
-      s += '<div class="row' + cls + (r.num ? '' : ' pending') + '"><span class="pos num">' + r.pos + '</span><span class="n num">' + (esc(r.num) || '?') + (p && pShort(p) ? '<small>' + tagHTML(p) + '</small>' : '') + '</span><span class="g">G' + r.group + '</span><span class="d num">' + (r.off ? '+' + dur(r.off) : '—') + '</span><span class="h num">' + (o ? '<small style="font-size:13px">' + outLabel(p) + '</small>' : (r.start !== null ? hms(r.start) : '—')) + '</span></div>';
-    });
-    $('startlist').innerHTML = s;
+    $('startlist').innerHTML = window.R.startTableHTML(rows, P, { now });
     if (next) {
       const who = rows.filter(r => !out(r) && r.start === next.start).map(r => esc(r.num) || '?').join(' · ');
+      const gl = window.R.gLabel(next.group);
       $('next').hidden = false;
-      $('next').innerHTML = '<span class="lbl">Próxima largada · ' + hms(next.start) + '</span><span class="big num">' + who + '</span><span class="big num" style="font-size:clamp(24px,5vw,36px)">en ' + dur(next.start - now) + '</span>';
+      $('next').innerHTML = '<span class="lbl">Próxima largada · ' + gl + ' · ' + hms(next.start) + '</span><span class="big num">' + who + '</span><span class="big num" style="font-size:clamp(24px,5vw,36px)">en ' + dur(next.start - now) + '</span>';
     } else $('next').hidden = true;
   }
 
