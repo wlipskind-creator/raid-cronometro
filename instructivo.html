@@ -177,6 +177,23 @@ h2{font-size:clamp(30px,6.4vw,56px)}
       </div>
     </section>
 
+    <!-- Etapas -->
+    <section class="slide" aria-label="Etapas">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Arriba de Llegadas</div>
+          <h2>1ª o 2ª etapa</h2>
+          <p class="lead">Elegí la <b>etapa</b> que estás cronometrando. Cada etapa tiene su propia lista de llegadas y se carga igual: LLEGÓ y después los números.</p>
+          <p class="lead">En la 2ª etapa, el panel de números muestra solo los caballos que <b>llegaron en la 1ª</b> y siguen en carrera.</p>
+        </div>
+        <div class="mock">
+          <div class="m-roles"><span>1ª etapa</span><span class="on">2ª etapa</span></div>
+          <div class="m-roles"><span class="on">Completo</span><span>Marcador</span><span>Planillero</span></div>
+          <div class="m-mark">Llegó<small>2ª etapa · tocá una vez por caballo</small></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Rol -->
     <section class="slide" aria-label="Tu rol">
       <div class="cols">
@@ -300,21 +317,45 @@ h2{font-size:clamp(30px,6.4vw,56px)}
     <section class="slide" aria-label="Largada">
       <div class="cols">
         <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="eyebrow">Pestaña Largada 2ª</div>
+          <div class="eyebrow">Pestaña Largada</div>
           <h2>La largada se arma sola</h2>
-          <p class="lead">Se carga la <b>hora de largada del primero</b> y la app calcula la de cada caballo, con la misma diferencia con que llegó.</p>
+          <p class="lead">El primero larga la 2ª etapa <b>una hora después de su llegada</b> (la neutralización se puede cambiar). Cada caballo larga con la misma diferencia con que llegó.</p>
+          <p class="lead">En esta pestaña también se carga la <b>hora de largada de la 1ª etapa</b>, para calcular los promedios.</p>
           <p class="lead">Los de un mismo grupo <b>largan juntos</b>. Los que abandonaron o se retiraron figuran tachados y no largan.</p>
         </div>
         <div style="overflow-x:auto">
           <table class="tbl num">
             <thead><tr><th>Orden</th><th>N°</th><th>Dif.</th><th>Largada</th></tr></thead>
             <tbody>
-              <tr><td>1</td><td class="n">27</td><td>—</td><td class="h">12:30:00</td></tr>
-              <tr class="same"><td>2</td><td class="n">14</td><td>+0:38</td><td class="h">12:30:38</td></tr>
-              <tr class="same"><td>3</td><td class="n">31</td><td>+0:38</td><td class="h">12:30:38</td></tr>
-              <tr><td>4</td><td class="n">8</td><td>+0:40</td><td class="h">12:30:40</td></tr>
+              <tr><td>1</td><td class="n">27</td><td>—</td><td class="h">12:42:17</td></tr>
+              <tr class="same"><td>2</td><td class="n">14</td><td>+0:38</td><td class="h">12:42:55</td></tr>
+              <tr class="same"><td>3</td><td class="n">31</td><td>+0:38</td><td class="h">12:42:55</td></tr>
+              <tr><td>4</td><td class="n">8</td><td>+0:40</td><td class="h">12:42:57</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultados -->
+    <section class="slide" aria-label="Resultados">
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="eyebrow">Pestaña Resultados</div>
+          <h2>Tiempos y promedios</h2>
+          <p class="lead">Con los kilómetros de cada etapa, la app calcula el <b>tiempo y el promedio en km/h</b> de cada caballo: 1ª etapa, 2ª etapa y raid completo.</p>
+          <p class="lead">La 2ª etapa se mide desde la <b>largada del primero</b>. El total descuenta la neutralización. Si falta un dato, la app avisa cuál.</p>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl num">
+            <thead><tr><th>Pos.</th><th>N°</th><th>1ª</th><th>2ª</th><th>General</th></tr></thead>
+            <tbody>
+              <tr class="same"><td>1°</td><td class="n">14</td><td>14,53</td><td>15,08</td><td class="h">14,76</td></tr>
+              <tr><td>2°</td><td class="n">27</td><td>14,59</td><td>14,93</td><td class="h">14,74</td></tr>
+              <tr><td>3°</td><td class="n">8</td><td>14,53</td><td>14,57</td><td class="h">14,55</td></tr>
+            </tbody>
+          </table>
+          <p class="lead" style="font-size:14px;margin-top:6px">Promedios en km/h.</p>
         </div>
       </div>
     </section>
@@ -335,8 +376,8 @@ h2{font-size:clamp(30px,6.4vw,56px)}
     <section class="slide cover" aria-label="A probar">
       <div class="eyebrow">Ahora te toca</div>
       <h1>A probarla</h1>
-      <p class="lead">Abrí el link que te pasaron y practicá sin miedo. En la versión de prueba <b>cada celular guarda sus propios datos</b>, así que podés equivocarte tranquilo.</p>
-      <p class="lead">Para empezar de cero: <b>Carrera → Empezar carrera nueva</b>. Si algo no se entiende o falta, avisá.</p>
+      <p class="lead">Entrá a <b>raid-cronometro.netlify.app/cronometro</b> con el correo y la contraseña que te dio la FEU.</p>
+      <p class="lead">Practicá en el raid de prueba que te indiquen. Si algo no se entiende o falta, avisá.</p>
     </section>
 
   </div>
