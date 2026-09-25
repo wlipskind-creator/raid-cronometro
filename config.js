@@ -12,6 +12,6 @@ window.FIREBASE_CONFIG = {
 
 // Nombre que se muestra arriba en la página pública.
 window.APP_INFO = {
-  title: 'Raids FEU',
-  subtitle: 'Llegadas y largadas en vivo'
+  title: 'Raids',
+  subtitle: 'Llegadas, largadas y resultados en vivo'
 };

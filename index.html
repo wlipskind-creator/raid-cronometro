@@ -5,8 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1D6A43">
 <title>Raids · En vivo</title>
-<meta name="description" content="Raids hípicos: llegadas de la 1ª etapa y largada de la 2ª etapa, en vivo.">
+<meta name="description" content="Llegadas, largadas y resultados de cada raid, al instante.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Raids · En vivo">
+<meta property="og:description" content="Llegadas, largadas y resultados de cada raid, al instante.">
+<meta property="og:url" content="https://raid-cronometro.netlify.app/">
+<meta property="og:image" content="https://raid-cronometro.netlify.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="app.css">
@@ -19,9 +29,12 @@
   <!-- LISTA DE RAIDS -->
   <section id="home" style="display:flex;flex-direction:column;gap:18px">
     <div class="p-head">
-      <div>
+      <div class="brandrow">
+        <img src="icon.svg" alt="" class="brandmark">
+        <div>
         <div class="p-title" id="app-title">Raids</div>
         <div class="p-sub" id="app-sub">Llegadas y largadas en vivo</div>
+        </div>
       </div>
     </div>
     <div id="races" style="display:flex;flex-direction:column;gap:20px"><div class="table"><div class="empty-list">Cargando raids…</div></div></div>
