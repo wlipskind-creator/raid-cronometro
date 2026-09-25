@@ -7,12 +7,17 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
+  :root:not([data-theme="light"]):not([data-theme="sun"]){
     color-scheme:dark;
     --bg:#0E1411; --surface:#17201B; --surface2:#1E2922; --ink:#E7EFEA; --muted:#93A59B; --line:#2C3A32;
     --accent:#3FB97C; --accent-ink:#06130C; --pend:#F2B53A; --pend-bg:#3A2D0E; --danger:#FF7A6E; --sel:#1F3A2B;
     --live:#3FB97C; --off:#FF7A6E;
   }
+}
+:root[data-theme="sun"]{
+    color-scheme:light;
+    --bg:#FFFFFF; --surface:#FFFFFF; --surface2:#EFEFEF; --ink:#000000; --muted:#2E2E2E; --line:#8A8A8A;
+    --pend:#8A5A00; --pend-bg:#FFE9B0; --danger:#A0001A; --off:#A0001A;
 }
 :root[data-theme="dark"]{
     color-scheme:dark;
@@ -308,3 +313,17 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 .srow.out .st{font-weight:600}
 .sgroup.past{opacity:.5}
 .sgroup.next .sghd{background:var(--sel)}
+
+/* Selector de colores */
+.tema-btn{align-self:center;font-size:14px;margin-top:6px}
+.tema-back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:16px}
+.tema{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:460px;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow:auto}
+.tema h2{margin:0;font-family:var(--display);text-transform:uppercase;font-size:22px}
+.tema-l{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tema-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tema-colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.5em,1fr));gap:6px}
+.tema button[data-mode],.tema button[data-color]{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 8px;text-align:left;font-size:15px;display:flex;align-items:center;gap:8px}
+.tema button[data-mode]{flex-direction:column;align-items:flex-start;gap:0}
+.tema button small{font-size:12px;color:var(--muted)}
+.tema button[aria-pressed="true"]{border:2px solid var(--accent);background:var(--sel)}
+.tema i{width:18px;height:18px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.2)}

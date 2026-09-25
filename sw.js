@@ -1,7 +1,7 @@
 // Guarda la app en el teléfono para que abra aunque no haya señal.
 // Estrategia: primero la red (siempre la versión más nueva) y, si no hay señal, lo guardado.
-const CACHE = 'raid-v19';
-const APP = ['./', 'index.html', 'carga.html', 'ayuda.html', 'instructivo.html', 'admin.html', 'admin.js', 'app.css', 'config.js', 'util.js', 'store.js', 'carga.js', 'panel.js', 'manifest.webmanifest', 'manifest-carga.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'plantilla-participantes.xlsx', 'admin-icon.svg', 'admin-touch-icon.png', 'admin-192.png', 'admin-512.png', 'manifest-admin.webmanifest',
+const CACHE = 'raid-v20';
+const APP = ['./', 'index.html', 'carga.html', 'ayuda.html', 'instructivo.html', 'admin.html', 'admin.js', 'app.css', 'config.js', 'util.js', 'store.js', 'carga.js', 'panel.js', 'tema.js', 'manifest.webmanifest', 'manifest-carga.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'plantilla-participantes.xlsx', 'admin-icon.svg', 'admin-touch-icon.png', 'admin-192.png', 'admin-512.png', 'manifest-admin.webmanifest',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'];
