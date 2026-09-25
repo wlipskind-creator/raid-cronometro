@@ -21,11 +21,23 @@ window.Store = (function () {
   function firebaseStore() {
     firebase.initializeApp(cfg);
     const auth = firebase.auth(), db = firebase.firestore();
-    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    // Guardar en el teléfono para trabajar sin señal (no hace falta en Administración).
+    if (!window.RAID_NO_PERSIST) db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
     const FV = firebase.firestore.FieldValue;
     let user = null, raceId = null, offset = +(lsGet('raid-offset') || 0), clockSynced = false, second = null;
     const errHandlers = [];
-    const fail = e => errHandlers.forEach(f => f(e));
+    // En iPhone, al salir de Safari (por ejemplo para elegir una foto) a veces se corta el almacenamiento
+    // interno y Firebase queda fuera de servicio ("client has already been terminated").
+    // En ese caso se recarga la página: lo pendiente queda guardado y se envía al volver.
+    function recover(e) {
+      const m = String((e && (e.message || e.code)) || e || '');
+      if (!/terminated|INTERNAL ASSERTION|IndexedDB|indexeddb/i.test(m)) return false;
+      let last = 0; try { last = +sessionStorage.getItem('raid-reload') || 0; } catch (x) {}
+      if (Date.now() - last > 20000) { try { sessionStorage.setItem('raid-reload', String(Date.now())); } catch (x) {} setTimeout(() => location.reload(), 300); }
+      return true;
+    }
+    window.addEventListener('unhandledrejection', ev => { if (recover(ev.reason)) ev.preventDefault(); });
+    const fail = e => { if (!recover(e)) errHandlers.forEach(f => f(e)); };
     const arrCol = () => db.collection('races').doc(raceId).collection('arrivals');
     const partCol = () => db.collection('races').doc(raceId).collection('participants');
     const list = q => q.docs.map(d => Object.assign({ id: d.id }, d.data()));
@@ -118,7 +130,7 @@ window.Store = (function () {
       async clearParticipants() { if (!raceId) return; const col = partCol(); const ds = (await col.get()).docs; await commitChunks(ds.map(d => b => b.delete(col.doc(d.id)))); },
 
       // ---- Administración ----
-      async saveClub(id, data) { const ref = id ? db.collection('clubs').doc(id) : db.collection('clubs').doc(); await ref.set(data, { merge: true }); return ref.id; },
+      async saveClub(id, data) { const ref = id ? db.collection('clubs').doc(id) : db.collection('clubs').doc(); try { await ref.set(data, { merge: true }); } catch (e) { if (recover(e)) throw new Error('Se reinició la conexión. La página se recarga: volvé a tocar Crear club.'); throw e; } return ref.id; },
       deleteClub(id) { return db.collection('clubs').doc(id).delete(); },
       async saveRace(id, data) {
         const ref = id ? db.collection('races').doc(id) : db.collection('races').doc();
