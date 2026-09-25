@@ -62,19 +62,36 @@ window.R = (function () {
     });
   }
   // Convierte filas en participantes. La columna del número se detecta por el título (N°, Número, Dorsal) o es la primera.
+  const NUM_HEAD = /^(n\s*[°ºo.]*\s*(de\s+)?(orden|dorsal|caballo|inscripci[oó]n)?|nro\.?(\s*de)?(\s*\w+)?|n[uú]m(ero|\.)?(\s*de)?(\s*\w+)?|dorsal|#)$/i;
+  const onlyNum = v => /^\s*\d+[a-zA-Z]?\s*$/.test(String(v == null ? '' : v));
   function toParticipants(rows) {
     if (!rows.length) return { list: [], headers: [] };
-    const first = rows[0];
-    const hasHeader = !/^\d+[a-zA-Z]?$/.test(String(first[0] || '').trim()) && first.some(c => /[a-záéíóúñ]/i.test(c));
-    let headers = hasHeader ? first.map((h, i) => h || 'Dato ' + (i + 1)) : first.map((_, i) => i === 0 ? 'N°' : 'Dato ' + (i + 1));
-    let ni = hasHeader ? headers.findIndex(h => /^(n[°ºo.]?|nro\.?|n[uú]mero|dorsal|num\.?)$/i.test(h.trim())) : 0;
-    if (ni < 0) ni = 0;
-    const body = hasHeader ? rows.slice(1) : rows;
+    // La fila de títulos puede no ser la primera (a veces arriba va el nombre del raid)
+    let hi = rows.slice(0, 6).findIndex(r => r.some(c => NUM_HEAD.test(String(c || '').trim())));
+    if (hi < 0) {
+      const first = rows[0];
+      hi = (!onlyNum(first[0]) && first.some(c => /[a-záéíóúñ]/i.test(c))) ? 0 : -1;
+    }
+    const hasHeader = hi >= 0;
+    const first = hasHeader ? rows[hi] : rows[0];
+    const width = Math.max.apply(null, rows.map(r => r.length));
+    let headers = [];
+    for (let i = 0; i < width; i++) headers.push(hasHeader ? (String(first[i] || '').trim() || 'Dato ' + (i + 1)) : (i === 0 ? 'N°' : 'Dato ' + (i + 1)));
+    const body = hasHeader ? rows.slice(hi + 1) : rows;
+    let ni = hasHeader ? headers.findIndex(h => NUM_HEAD.test(h)) : 0;
+    if (ni < 0) { // sin título reconocible: la primera columna con números
+      ni = headers.findIndex((_, j) => { const v = body.map(r => r[j]).filter(x => x !== undefined && String(x).trim() !== ''); return v.length && v.filter(onlyNum).length >= v.length * 0.8; });
+      if (ni < 0) ni = 0;
+    }
     const list = [], seen = new Set();
     body.forEach((r, i) => {
       const num = numKey(r[ni]); if (!num || seen.has(num)) return; seen.add(num);
       const data = {};
-      headers.forEach((h, j) => { if (j !== ni && r[j]) data[h] = r[j]; });
+      headers.forEach((h, j) => {
+        if (j === ni || r[j] == null || String(r[j]).trim() === '') return;
+        if (numKey(r[j]) === num && (NUM_HEAD.test(h) || onlyNum(r[j]))) return; // el número repetido en otra columna
+        data[h] = r[j];
+      });
       list.push({ num, data, order: i });
     });
     return { list, headers: headers.filter((_, j) => j !== ni) };
@@ -82,14 +99,16 @@ window.R = (function () {
   // Texto corto para mostrar: caballo y jinete si hay columnas con esos nombres, si no las dos primeras.
   function pName(p) {
     if (!p || !p.data) return '';
-    const ks = Object.keys(p.data);
+    // nunca repetir el número del caballo ni mostrar columnas que son solo números
+    const ok = v => { const t = String(v == null ? '' : v).trim(); return t && numKey(t) !== String(p.num) && !onlyNum(t); };
+    const ks = Object.keys(p.data).filter(k => ok(p.data[k]) && !NUM_HEAD.test(k.trim()));
     const horse = ks.find(k => /caballo|equino|animal|nombre/i.test(k));
     const rider = ks.find(k => /jinete|binomio|corredor|piloto/i.test(k));
     const parts = [];
     if (horse) parts.push(p.data[horse]);
     if (rider) parts.push(p.data[rider]);
     if (!parts.length) ks.slice(0, 2).forEach(k => parts.push(p.data[k]));
-    return parts.filter(Boolean).join(' · ');
+    return parts.map(v => String(v).trim()).filter(Boolean).join(' · ');
   }
   function pShort(p) { const n = pName(p); return n.split(' · ')[0] || ''; }
   // Apellido para identificar rápido: columna "Apellido" si existe; si no, el del jinete o el del dueño.
@@ -98,10 +117,10 @@ window.R = (function () {
     const ks = Object.keys(p.data);
     if (!ks.some(k => /caballo|equino|animal|nombre/i.test(k))) return '';
     const ap = ks.find(k => /apellido/i.test(k));
-    if (ap && p.data[ap]) return String(p.data[ap]).trim();
+    if (ap && p.data[ap] && !onlyNum(p.data[ap])) return String(p.data[ap]).trim();
     const who = ks.find(k => /jinete|binomio|corredor|piloto/i.test(k)) || ks.find(k => /propietario|due[ñn]o|stud|haras|criador/i.test(k));
     const v = who ? String(p.data[who] || '').trim() : '';
-    if (!v) return '';
+    if (!v || onlyNum(v) || numKey(v) === String(p.num)) return '';
     if (v.includes(',')) return v.split(',')[0].trim();
     const w = v.split(/\s+/).filter(x => x.replace(/\./g, '').length > 1);
     return w.length ? w[w.length - 1] : v;

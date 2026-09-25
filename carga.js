@@ -165,6 +165,13 @@
   });
 
   // ---------- Números: teclado y panel ----------
+  var padOpen = false;
+  try { padOpen = localStorage.getItem('raid-pad') === '1'; } catch (e) {}
+  $('padtoggle').addEventListener('click', () => {
+    padOpen = !padOpen;
+    try { localStorage.setItem('raid-pad', padOpen ? '1' : '0'); } catch (e) {}
+    render();
+  });
   $('pad').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const k = b.dataset.k;
     if (k === 'del') buf = buf.slice(0, -1); else if (k === 'ok') assign(buf); else if (buf.length < 4) buf += k;
@@ -405,6 +412,12 @@
     // En la 2ª etapa solo corren los que llegaron en la 1ª
     const avail = parts().filter(p => statusOf(p) === 'carrera' && !(stage === 2 && p.noLarga) && !arrived.has(p.num) && (stage === 1 || !in1.size || in1.has(p.num))).sort(byNum);
     $('tiles-wrap').hidden = !parts().length;
+    // Con lista de participantes alcanza con tocar el número: el teclado queda guardado
+    const conLista = parts().length > 0;
+    $('padtoggle').hidden = !conLista;
+    $('pad').hidden = conLista && !padOpen;
+    $('padtoggle').textContent = padOpen ? 'Ocultar teclado' : 'Número que no está en la lista: abrir teclado';
+    $('tiles').classList.toggle('tall', conLista && !padOpen);
     const filt = buf ? avail.filter(p => String(p.num).startsWith(buf)) : avail;
     $('tiles-title').innerHTML = '<b class="num">' + avail.length + '</b> en carrera sin llegar' + (buf ? ' · empiezan con ' + esc(buf) : '');
     $('tiles').innerHTML = filt.length ? filt.map(p => '<button class="tile num" data-num="' + esc(p.num) + '">' + esc(p.num) + '<small>' + tagHTML(p) + '</small></button>').join('')
