@@ -122,14 +122,18 @@
   }
   // Colores de la camiseta (null = sin colores)
   function setCols(c) {
-    cols = c && c.col1 ? { col1: c.col1, col2: c.col2 || '' } : null;
-    if (cols) { $('c-col1').value = cols.col1; $('c-col2').value = cols.col2 || '#FFFFFF'; }
+    cols = c && c.col1 ? { col1: c.col1, col2: c.col2 || '', col3: c.col3 || '' } : null;
+    if (cols) { $('c-col1').value = cols.col1; $('c-col2').value = cols.col2 || '#FFFFFF'; if (cols.col3) $('c-col3').value = cols.col3; }
+    $('c-col3-box').hidden = !(cols && cols.col3);
+    $('c-col3-tog').textContent = cols && cols.col3 ? 'Quitar el tercero' : '+ Tercer color';
     $('c-band').style.background = cols ? window.R.clubStripe(cols) : 'transparent';
     $('c-band').hidden = !cols; $('c-col-clear').hidden = !cols;
-    $('c-col-note').textContent = cols ? 'La app toma el color del club en sus raids: botón LLEGÓ, resaltados y una franja arriba.' : 'Sin colores: la app usa el verde de siempre. Tocá un cuadrado para elegir.';
+    $('c-col-note').textContent = cols ? 'La app usa el principal y el secundario para el botón LLEGÓ y los resaltados. La franja de arriba lleva todos los colores.' : 'Sin colores: la app usa el verde de siempre. Tocá un cuadrado para elegir.';
     setLogo(logoData);
   }
-  ['c-col1', 'c-col2'].forEach(id => $(id).addEventListener('input', () => setCols({ col1: $('c-col1').value, col2: $('c-col2').value })));
+  const readCols = three => ({ col1: $('c-col1').value, col2: $('c-col2').value, col3: three ? $('c-col3').value : '' });
+  ['c-col1', 'c-col2', 'c-col3'].forEach(id => $(id).addEventListener('input', () => setCols(readCols(!$('c-col3-box').hidden))));
+  $('c-col3-tog').addEventListener('click', () => setCols(readCols($('c-col3-box').hidden)));
   $('c-col-clear').addEventListener('click', () => setCols(null));
   function setLogo(d) { logoData = d; $('c-logo-prev').innerHTML = logoHTML(Object.assign({ logo: d, name: $('c-name').value, short: $('c-short').value }, cols || {}), 56); $('c-logo-clear').hidden = !d; }
   $('club-list').addEventListener('click', async e => {
@@ -169,7 +173,7 @@
   $('c-cancel').addEventListener('click', () => { resetClubForm(); note('c-msg', ''); });
   $('club-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const data = { name: $('c-name').value.trim(), short: $('c-short').value.trim().toUpperCase(), logo: logoData || '', col1: cols ? cols.col1 : '', col2: cols ? (cols.col2 || '') : '' };
+    const data = { name: $('c-name').value.trim(), short: $('c-short').value.trim().toUpperCase(), logo: logoData || '', col1: cols ? cols.col1 : '', col2: cols ? (cols.col2 || '') : '', col3: cols ? (cols.col3 || '') : '' };
     try { await S.saveClub(editClub, data); note('c-msg', editClub ? 'Cambios guardados.' : 'Club creado: ' + data.name + '.'); resetClubForm(); } catch (x) { note('c-msg', errText(x), true); }
   });
   logoData = ''; setCols(null);

@@ -407,8 +407,10 @@ window.R = (function () {
   function clubStripe(c) {
     const ok = v => /^#[0-9a-f]{6}$/i.test(v || '');
     if (!c || !ok(c.col1)) return '';
-    const b = ok(c.col2) ? c.col2 : c.col1;
-    return 'repeating-linear-gradient(90deg,' + c.col1 + ' 0 22px,' + b + ' 22px 44px)';
+    const L = [c.col1, c.col2, c.col3].filter(ok);
+    if (L.length === 1) L.push(L[0]);
+    const w = 20;
+    return 'repeating-linear-gradient(90deg,' + L.map((x, i) => x + ' ' + i * w + 'px ' + (i + 1) * w + 'px').join(',') + ')';
   }
   function logoHTML(club, size) {
     size = size || 40;

@@ -26,12 +26,15 @@
   function hsl2rgb([h, s, l]) { if (!s) return [l, l, l]; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; const t = x => { x = (x + 1) % 1; return x < 1 / 6 ? p + (q - p) * 6 * x : x < .5 ? q : x < 2 / 3 ? p + (q - p) * (2 / 3 - x) * 6 : p; }; return [t(h + 1 / 3), t(h), t(h - 1 / 3)]; }
   const mix = (a, b, k) => a.map((v, i) => v * (1 - k) + b[i] * k);
   // Elige el color de la camiseta con más "color" (si uno es blanco o negro, usa el otro)
-  function clubBase(c) {
+  // Devuelve [color para la app, segundo color o null]. Si uno es blanco o negro, no sirve para botones.
+  const plain = x => { const [, s, l] = rgb2hsl(x); return l < .1 || l > .92 || (s < .12 && (l < .2 || l > .85)); };
+  function clubPair(c) {
     const ok = v => /^#[0-9a-f]{6}$/i.test(v || '');
     const list = [c.col1, c.col2].filter(ok).map(hex2rgb);
     if (!list.length) return null;
-    const sat = x => { const [, s, l] = rgb2hsl(x); return l < .08 || l > .94 ? 0 : s; };
-    return list.length > 1 && sat(list[1]) > sat(list[0]) + .25 ? list[1] : list[0];
+    let [a, b] = list;
+    if (b && plain(a) && !plain(b)) [a, b] = [b, a];
+    return [a, b && !plain(b) && contrast(a, b) > 1.3 ? b : null];
   }
   // Ajusta la luminosidad hasta tener buen contraste con el fondo
   function fit(rgb, bg, dark) {
@@ -40,9 +43,9 @@
     return out;
   }
   function clubColors(dark) {
-    const base = club && clubBase(club); if (!base) return null;
-    const bg = hex2rgb(dark ? '#17201B' : '#FFFFFF'), acc = fit(base, bg, dark);
-    return [rgb2hex(acc), rgb2hex(mix(bg, acc, dark ? .28 : .16))];
+    const pr = club && clubPair(club); if (!pr) return null;
+    const bg = hex2rgb(dark ? '#17201B' : '#FFFFFF'), acc = fit(pr[0], bg, dark), acc2 = pr[1] ? fit(pr[1], bg, dark) : acc;
+    return [rgb2hex(acc), rgb2hex(mix(bg, acc, dark ? .28 : .16)), rgb2hex(acc2), rgb2hex(mix(bg, acc2, dark ? .28 : .16))];
   }
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
@@ -59,6 +62,8 @@
     root.style.setProperty('--club-stripe', stripe || 'none');
     root.classList.toggle('club-on', !!stripe);
     root.style.setProperty('--accent-ink', dark ? '#0B0F0D' : '#FFFFFF');
+    root.style.setProperty('--accent2', cc ? cc[2] : acc);
+    root.style.setProperty('--sel2', mode === 'sun' ? (cl ? cl[3] : c.l[1]) : (cc ? cc[3] : sel));
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta && !meta.dataset.fixed) meta.setAttribute('content', dark ? '#0E1411' : acc);
     paint();
@@ -94,9 +99,9 @@
   }
   // Lo llaman las pantallas al abrir un raid (con su club) o al volver a la lista (null)
   function setClub(c) {
-    const k = c ? [c.col1, c.col2].join() : '';
-    if (k === (club ? [club.col1, club.col2].join() : '')) return;
-    club = c && c.col1 ? { col1: c.col1, col2: c.col2 || '' } : null; apply();
+    const key = x => x ? [x.col1, x.col2, x.col3].join() : '';
+    if (key(c && c.col1 ? c : null) === key(club)) return;
+    club = c && c.col1 ? { col1: c.col1, col2: c.col2 || '', col3: c.col3 || '' } : null; apply();
   }
   window.RaidTema = { open, setClub };
   document.addEventListener('DOMContentLoaded', () => {
