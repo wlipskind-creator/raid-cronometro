@@ -110,5 +110,10 @@
     b.type = 'button'; b.className = 'ghost tema-btn'; b.textContent = 'Colores de la app';
     b.addEventListener('click', open);
     wrap.appendChild(b);
+    if (!(window.R && window.R.VERSION)) return;
+    const v = document.createElement('p');
+    v.className = 'foot'; v.style.cssText = 'text-align:center;font-size:12px;margin:0';
+    v.textContent = 'Versión ' + window.R.VERSION;
+    wrap.appendChild(v);
   });
 })();

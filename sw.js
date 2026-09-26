@@ -1,6 +1,6 @@
 // Guarda la app en el teléfono para que abra aunque no haya señal.
 // Estrategia: primero la red (siempre la versión más nueva) y, si no hay señal, lo guardado.
-const CACHE = 'raid-v23';
+const CACHE = 'raid-v25';
 const APP = ['./', 'index.html', 'carga.html', 'ayuda.html', 'instructivo.html', 'admin.html', 'admin.js', 'app.css', 'config.js', 'util.js', 'store.js', 'carga.js', 'panel.js', 'tema.js', 'manifest.webmanifest', 'manifest-carga.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'plantilla-participantes.xlsx', 'admin-icon.svg', 'admin-touch-icon.png', 'admin-192.png', 'admin-512.png', 'manifest-admin.webmanifest',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
@@ -18,7 +18,7 @@ self.addEventListener('fetch', e => {
   const ours = u.origin === location.origin || u.host === 'www.gstatic.com' || u.host.endsWith('fonts.googleapis.com') || u.host.endsWith('fonts.gstatic.com');
   if (!ours) return; // los datos de Firebase los maneja Firebase
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request, u.origin === location.origin ? { cache: 'no-cache' } : undefined).then(r => {
       if (r && (r.ok || r.type === 'opaque')) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return r;
     }).catch(() => caches.match(e.request, { ignoreSearch: true }))

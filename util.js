@@ -123,7 +123,7 @@ window.R = (function () {
       });
       list.push({ num, data, order: i });
     });
-    return { list, headers: headers.filter((_, j) => j !== ni) };
+    return { list, headers: headers.filter((h, j) => j !== ni && list.some(p => p.data[h] != null)) };
   }
   // Texto corto para mostrar: caballo y jinete si hay columnas con esos nombres, si no las dos primeras.
   function pName(p) {
@@ -151,8 +151,15 @@ window.R = (function () {
     const v = who ? String(p.data[who] || '').trim() : '';
     if (!v || onlyNum(v) || numKey(v) === String(p.num)) return '';
     if (v.includes(',')) return v.split(',')[0].trim();
-    const w = v.split(/\s+/).filter(x => x.replace(/\./g, '').length > 1);
-    return w.length ? w[w.length - 1] : v;
+    // Nombres como en Uruguay: nombres y después dos apellidos. Se muestra el primer apellido.
+    // "de", "del", "la"... van pegados al apellido que sigue (ej. "de León").
+    const raw = v.split(/\s+/).filter(x => x.replace(/\./g, '').length > 1 || /^(de|y)$/i.test(x));
+    const w = [];
+    raw.forEach(x => { const last = w[w.length - 1]; if (last && /^(de|del|la|las|los|da|das|do|dos|van|von|y)$/i.test(last.split(' ').pop()) ) w[w.length - 1] = last + ' ' + x; else w.push(x); });
+    if (!w.length) return v;
+    if (w.length <= 2) return w[w.length - 1];
+    const i = w.length === 3 ? 1 : w.length - 2;
+    return i > 1 && /^(de|del|la|las|los|da|das|do|dos|van|von|y)\s/i.test(w[i]) ? w[i - 1] + ' ' + w[i] : w[i];
   }
   // Nombre del caballo y, debajo, el apellido
   const tagHTML = p => { const h = pShort(p), su = pSur(p); return esc(h) + (su && su !== h ? '<br>' + esc(su) : ''); };
@@ -426,7 +433,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { VERSION: '25', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };
