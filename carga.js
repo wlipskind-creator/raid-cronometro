@@ -97,6 +97,33 @@
   const parts = () => data.participants || [];
   const pm = () => pMap(parts());
   function msg(t, warn) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (warn ? ' warn' : ''); }
+  // Horas escritas con el teclado numérico: se ponen solos los ":" (143512 → 14:35:12)
+  function fixTime(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length !== 4 && d.length !== 6) return null;
+    const h = +d.slice(0, 2), m = +d.slice(2, 4), x = d.length === 6 ? +d.slice(4, 6) : 0;
+    if (h > 23 || m > 59 || x > 59) return null;
+    return d.slice(0, 2) + ':' + d.slice(2, 4) + ':' + (d.length === 6 ? d.slice(4, 6) : '00');
+  }
+  document.addEventListener('input', e => {
+    if (!e.target.classList || !e.target.classList.contains('tinput')) return;
+    const d = e.target.value.replace(/\D/g, '').slice(-6); // si se escribe encima, quedan los últimos 6 números
+    e.target.value = d.replace(/^(\d{2})(\d{1,2})?(\d{1,2})?$/, (_, a, b, c) => a + (b ? ':' + b : '') + (c ? ':' + c : '')) || d;
+  });
+  // Al tocar el campo se vacía (la hora anterior queda de guía, en gris) y se escribe la nueva de corrido.
+  // Si no se escribe nada, vuelve la hora que estaba.
+  const isT = el => el && el.classList && el.classList.contains('tinput');
+  document.addEventListener('focusin', e => { const el = e.target; if (!isT(el)) return; el.dataset.prev = el.value; el.placeholder = el.value || 'hh:mm:ss'; el.value = ''; });
+  // La hora se guarda al salir del campo (o con Enter). Se avisa con un "change" propio, porque el del
+  // navegador no siempre llega cuando el texto se reacomoda mientras se escribe.
+  document.addEventListener('focusout', e => {
+    const el = e.target; if (!isT(el)) return;
+    if (el.value === '' || el.value === el.dataset.prev) { el.value = el.dataset.prev || ''; return; }
+    el.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: 'tinput' }));
+  });
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-clear]'); if (b) S.setRace({ [b.dataset.clear]: '' }); });
+  document.addEventListener('keydown', e => { if (isT(e.target) && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
   function buzz() { if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {} }
   function validSel() {
     if (!sel) return null;
@@ -131,14 +158,14 @@
   // ---------- Etapa ----------
   function applyStage() { document.querySelectorAll('[data-stage]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.stage === stage)); }
   document.querySelectorAll('[data-stage]').forEach(b => b.addEventListener('click', () => {
-    stage = +b.dataset.stage; lsSet('raid-stage', String(stage)); sel = null; buf = ''; msg('');
+    stage = +b.dataset.stage; lsSet('raid-stage', String(stage)); sel = null; buf = ''; msg(''); unlocked = false;
     data.arrivals = ofStage(data.all, stage); applyStage(); render();
   }));
   applyStage();
 
   // ---------- LLEGÓ ----------
   function mark(tt) {
-    if (rol === 'planillero') return;
+    if (rol === 'planillero' || $('mark').disabled) return;
     keepAwake();
     const t = sec(tt != null ? tt : S.now());
     if (!data.race) { msg('Esperando los datos del raid…', true); return; }
@@ -184,6 +211,9 @@
   });
 
   // ---------- Números: teclado y panel ----------
+  // LLEGÓ bloqueado: en la 1ª etapa cuando ya empezó a llegar la 2ª; en la 2ª cuando llegaron todos los que largaron
+  var unlocked = false;
+  $('unlock').addEventListener('click', () => { unlocked = true; render(); });
   var padOpen = false;
   try { padOpen = localStorage.getItem('raid-pad') === '1'; } catch (e) {}
   $('padtoggle').addEventListener('click', () => {
@@ -251,12 +281,26 @@
     render();
   });
   $('list').addEventListener('change', e => {
-    if (e.target.id !== 'edit-time' || !e.target.value) return;
+    if (e.target.id !== 'edit-time' || e.detail !== 'tinput') return;
+    const v = fixTime(e.target.value);
     const s = validSel(); if (!s) return;
-    const [h, m, x] = e.target.value.split(':').map(Number);
+    if (v === '') return;
+    if (!v) { msg('Escribí la hora completa: horas, minutos y segundos (ej. 11:42:57).', true); render(); return; }
+    const [h, m, x] = v.split(':').map(Number);
     const moveT = old => { const d = new Date(old); d.setHours(h, m, x || 0, 0); return d.getTime(); };
+    retime(s, moveT);
+  });
+  // Corrige la hora del grupo o del caballo elegido
+  function retime(s, moveT) {
     if (s.k === 'g') { const nt = moveT(s.t); S.moveGroup(data.arrivals.filter(a => a.t === s.t).map(a => a.id), nt); sel = { k: 'g', t: nt }; }
-    else { const a = byId(s.id); S.update(a.id, { t: moveT(a.t) }); }
+    else { const a = byId(s.id); if (a) S.update(a.id, { t: moveT(a.t) }); }
+    msg(''); render();
+  }
+  $('list').addEventListener('pointerdown', e => { if (e.target.closest('[data-act="tadj"]')) e.preventDefault(); });
+  $('list').addEventListener('click', e => {
+    const b = e.target.closest('[data-act="tadj"]'); if (!b) return;
+    const s = validSel(); if (!s) return;
+    retime(s, old => old + (+b.dataset.d) * 1000);
   });
 
   // ---------- Participantes ----------
@@ -347,9 +391,9 @@
   }
 
   // ---------- Carrera ----------
-  $('start1').addEventListener('change', e => S.setRace({ start1: e.target.value }));
-  $('start0').addEventListener('change', e => S.setRace({ start0: e.target.value }));
-  $('cierre').addEventListener('change', e => S.setRace({ cierre: e.target.value }));
+  $('start1').addEventListener('change', e => { if (e.detail !== 'tinput') return; const v = fixTime(e.target.value); if (v === null) { $('larg-msg').textContent = 'Escribí la hora completa, por ejemplo 08:30:00.'; render(); return; } $('larg-msg').textContent = ''; e.target.value = v; S.setRace({ start1: v }); });
+  $('start0').addEventListener('change', e => { if (e.detail !== 'tinput') return; const v = fixTime(e.target.value); if (v === null) { $('larg-msg').textContent = 'Escribí la hora completa, por ejemplo 08:30:00.'; render(); return; } $('larg-msg').textContent = ''; e.target.value = v; S.setRace({ start0: v }); });
+  $('cierre').addEventListener('change', e => { if (e.detail !== 'tinput') return; const v = fixTime(e.target.value); if (v === null) { $('larg-msg').textContent = 'Escribí la hora completa, por ejemplo 08:30:00.'; render(); return; } $('larg-msg').textContent = ''; e.target.value = v; S.setRace({ cierre: v }); });
   $('trofeo').addEventListener('change', e => S.setRace({ trofeo: e.target.value.trim() }));
   $('vetmin').addEventListener('change', e => { const v = e.target.value === '' ? 20 : Math.max(0, parseInt(e.target.value, 10) || 0); S.setRace({ vetMin: v }); });
   $('pdf').addEventListener('click', async () => {
@@ -407,11 +451,11 @@
     if (document.activeElement !== $('cierre')) $('cierre').value = race.cierre || '';
     { const c = cierreOf(race, data.all), m = cierreMinOf(race);
       const autoTxt = (() => { const r2 = Object.assign({}, race, { cierre: '' }); return cierreOf(r2, data.all).hora; })();
-      $('cierre-auto').textContent = race.cierre ? 'Cargado a mano. Si lo borrás, se calcula solo' + (autoTxt ? ': ' + autoTxt + '.' : '.') : (c.hora ? 'Calculado solo: ' + c.hora + ' (llegada del 1° en la 2ª etapa + ' + m + ' min). Solo cargalo si querés cambiarlo.' : 'Se calcula solo cuando llega el primero de la 2ª etapa: su llegada + ' + m + ' min (' + (m === 60 ? 'raid de 90 km o más' : 'raid de menos de 90 km') + ').'); }
+      $('cierre-auto').innerHTML = race.cierre ? 'Cargado a mano. <button class="ghost linkbtn" type="button" data-clear="cierre">Volver al automático</button>' + (autoTxt ? ' (' + autoTxt + ')' : '') : (c.hora ? 'Calculado solo: ' + c.hora + ' (llegada del 1° en la 2ª etapa + ' + m + ' min). Solo cargalo si querés cambiarlo.' : 'Se calcula solo cuando llega el primero de la 2ª etapa: su llegada + ' + m + ' min (' + (m === 60 ? 'raid de 90 km o más' : 'raid de menos de 90 km') + ').'); }
     if (document.activeElement !== $('trofeo')) $('trofeo').value = race.trofeo || '';
     if (document.activeElement !== $('vetmin')) $('vetmin').value = vetMinOf(race);
     { const a1 = ofStage(data.all, 1), auto = a1.length ? hms(Math.min.apply(null, a1.map(a => a.t)) + neutralOf(race) * 60000) : '';
-      $('start1-auto').textContent = race.start1 ? 'Cargada a mano. Si la borrás, se calcula sola' + (auto ? ': ' + auto + '.' : '.') : (auto ? 'Calculada sola: ' + auto + ' (llegada del 1° + ' + neutralOf(race) + ' min). Solo cargala si querés cambiarla.' : 'Se calcula sola cuando llega el primero de la 1ª etapa: su llegada + ' + neutralOf(race) + ' min.'); }
+      $('start1-auto').innerHTML = race.start1 ? 'Cargada a mano. <button class="ghost linkbtn" type="button" data-clear="start1">Volver a la automática</button>' + (auto ? ' (' + auto + ')' : '') : (auto ? 'Calculada sola: ' + auto + ' (llegada del 1° + ' + neutralOf(race) + ' min). Solo cargala si querés cambiarla.' : 'Se calcula sola cuando llega el primero de la 1ª etapa: su llegada + ' + neutralOf(race) + ' min.'); }
     $('buf').textContent = buf || '000'; $('buf').classList.toggle('empty', !buf);
 
     let tg;
@@ -432,6 +476,16 @@
     // En la 2ª etapa solo corren los que llegaron en la 1ª
     const avail = parts().filter(p => statusOf(p) === 'carrera' && !(stage === 2 && p.noLarga) && !arrived.has(p.num) && (stage === 1 || !in1.size || in1.has(p.num))).sort(byNum);
     $('tiles-wrap').hidden = !parts().length;
+    const a2 = ofStage(data.all, 2), got2 = new Set(a2.map(a => a.num).filter(Boolean));
+    const faltan2 = parts().filter(p => statusOf(p) === 'carrera' && !p.noLarga && (!in1.size || in1.has(p.num)) && !got2.has(p.num));
+    const done2 = parts().length > 0 && got2.size > 0 && !faltan2.length && !a2.some(a => !a.num);
+    const lock = stage === 1 ? a2.length > 0 : done2;
+    $('mark').disabled = gone || (lock && !unlocked);
+    $('lockmsg').hidden = !lock || gone || rol === 'planillero';
+    $('lock-text').textContent = stage === 1 ? 'La 1ª etapa está cerrada: ya empezaron las llegadas de la 2ª. Para corregir, tocá el grupo o el caballo abajo.' : 'Llegaron todos los caballos de la 2ª etapa. Para corregir, tocá el grupo o el caballo abajo.';
+    $('unlock').hidden = unlocked;
+    if (lock && unlocked) $('lock-text').textContent = 'LLEGÓ habilitado a mano.';
+    if (lock && !unlocked) { $('same').disabled = true; $('mark-sub').textContent = stage === 1 ? '1ª etapa cerrada' : 'Llegaron todos'; }
     // Con lista de participantes alcanza con tocar el número: el teclado queda guardado
     const conLista = parts().length > 0;
     $('padtoggle').hidden = !conLista;
@@ -453,9 +507,9 @@
       g.horses.forEach(a => { pos++; const s = sel && sel.k === 'h' && sel.id === a.id; const p = P[a.num];
         h += '<button class="chip num' + (a.num ? '' : ' pending') + (s ? ' selected' : '') + '" data-act="horse" data-id="' + esc(a.id) + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<span class="nm">' + tagHTML(p) + '</span>' : '') + '<small>' + pos + '°</small></button>'; });
       h += '<button class="chip add" data-act="addto" data-t="' + g.t + '" aria-label="Sumar caballo a este grupo">+</button></div>';
-      if (gSel) h += '<div class="edit"><span class="hint">Corregir la hora de todo el grupo:</span><input id="edit-time" type="time" step="1" value="' + hms(g.t) + '"><button class="ghost danger" data-act="delg" data-t="' + g.t + '">Borrar grupo</button><button class="ghost" data-act="close">Listo</button></div>';
+      if (gSel) h += '<div class="edit"><span class="hint">Corregir la hora de todo el grupo:</span><input id="edit-time" class="tinput num" type="text" inputmode="numeric" autocomplete="off" value="' + hms(g.t) + '"><span class="tadj"><button class="ghost" data-act="tadj" data-d="-1">−1 s</button><button class="ghost" data-act="tadj" data-d="1">+1 s</button></span><button class="ghost danger" data-act="delg" data-t="' + g.t + '">Borrar grupo</button><button class="ghost" data-act="close">Listo</button></div>';
       const hs = g.horses.find(a => sel && sel.k === 'h' && sel.id === a.id);
-      if (hs) h += '<div class="edit"><span class="hint">Para cambiar el N°, escribilo o tocalo en el panel. Si llegó en otro segundo, cambiale la hora:</span><input id="edit-time" type="time" step="1" value="' + hms(hs.t) + '"><button class="ghost danger" data-act="delh" data-id="' + esc(hs.id) + '">Quitar caballo</button><button class="ghost" data-act="close">Listo</button></div>';
+      if (hs) h += '<div class="edit"><span class="hint">Para cambiar el N°, escribilo o tocalo en el panel. Si llegó en otro segundo, cambiale la hora:</span><input id="edit-time" class="tinput num" type="text" inputmode="numeric" autocomplete="off" value="' + hms(hs.t) + '"><span class="tadj"><button class="ghost" data-act="tadj" data-d="-1">−1 s</button><button class="ghost" data-act="tadj" data-d="1">+1 s</button></span><button class="ghost danger" data-act="delh" data-id="' + esc(hs.id) + '">Quitar caballo</button><button class="ghost" data-act="close">Listo</button></div>';
       h += '</div>';
     });
     if (!(document.activeElement && document.activeElement.id === 'edit-time')) $('list').innerHTML = h;

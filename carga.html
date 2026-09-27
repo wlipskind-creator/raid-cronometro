@@ -78,6 +78,7 @@
         <div class="elapsed"><div class="clocklbl">Desde el 1°</div><div class="v num" id="since">—</div></div>
       </div>
       <button class="mark" id="mark">Llegó<span class="sub" id="mark-sub">Tocá una vez por cada caballo que cruza</span></button>
+      <div class="lockmsg" id="lockmsg" hidden><span id="lock-text"></span> <button class="ghost" type="button" id="unlock">Habilitar LLEGÓ igual</button></div>
       <button class="same" id="same">+ Otro caballo, mismo tiempo<span class="sub" id="same-sub">Suma un caballo al último grupo</span></button>
       <div class="entry">
         <div class="entryhead"><div class="target" id="target">—</div><div class="buf empty num" id="buf">000</div></div>
@@ -105,16 +106,17 @@
     <section id="view-larg" hidden style="flex-direction:column;gap:14px">
       <div class="card">
         <h2>Largadas</h2>
-        <div class="field"><label for="start0">Hora de largada de la 1ª etapa</label><input id="start0" type="time" step="1" class="num">
+        <div class="field"><label for="start0">Hora de largada de la 1ª etapa</label><input id="start0" class="num tinput" type="text" inputmode="numeric" autocomplete="off" placeholder="hh:mm:ss">
           <p class="foot" style="font-size:13px">Se usa para calcular el tiempo y el promedio de la 1ª etapa.</p></div>
         <div class="field"><label for="neutral">Neutralización (minutos)</label><input id="neutral" type="number" min="0" step="1" inputmode="numeric" class="num" placeholder="60" style="max-width:8em"></div>
-        <div class="field"><label for="start1">Hora de largada del 1° en la 2ª etapa</label><input id="start1" type="time" step="1" class="num">
+        <div class="field"><label for="start1">Hora de largada del 1° en la 2ª etapa</label><input id="start1" class="num tinput" type="text" inputmode="numeric" autocomplete="off" placeholder="hh:mm:ss">
           <p class="foot" style="font-size:13px" id="start1-auto">Se calcula sola: llegada del 1° en la 1ª etapa + neutralización. Solo cargala si querés cambiarla.</p></div>
         <p>En la 2ª etapa cada caballo larga con la diferencia con que llegó detrás del primero. Los de un mismo grupo largan juntos.</p>
-        <div class="field"><label for="cierre">Cierre de control</label><input id="cierre" type="time" step="1" class="num">
+        <div class="field"><label for="cierre">Cierre de control</label><input id="cierre" class="num tinput" type="text" inputmode="numeric" autocomplete="off" placeholder="hh:mm:ss">
           <p class="foot" style="font-size:13px" id="cierre-auto"></p></div>
         <div class="field"><label for="trofeo">Ganador trofeo F.E.U. (N°)</label><input id="trofeo" inputmode="text" placeholder="Ej.: 25 (44)" style="max-width:12em"></div>
       </div>
+      <div class="msg warn" id="larg-msg"></div>
       <div class="table" id="startlist"></div>
     </section>
 

@@ -43,14 +43,16 @@ window.R = (function () {
     const inRace = r => !isOut(P[r.num]);
     const next = o.now != null ? byG.find(G => G.rows.some(inRace) && G.rows[0].start !== null && G.rows[0].start > o.now - 1000) : null;
     let s = '';
+    let prevOut = null; // último grupo que larga (los grupos donde no larga nadie no cuentan)
     byG.forEach((G, gi) => {
       const r0 = G.rows[0], n = G.rows.filter(inRace).length;
-      const prev = gi ? byG[gi - 1].rows[0] : null; // diferencia con el grupo anterior: lo que falta para largar
+      const prev = n ? prevOut : null; // diferencia con el grupo anterior que larga: lo que falta para largar
+      if (n) prevOut = r0;
       const past = o.now != null && r0.start !== null && r0.start < o.now - 1000;
       const cls = !n || past ? ' past' : (next === G ? ' next' : '');
       s += '<div class="sgroup' + cls + '"><div class="sghd"><span class="sgl">' + gLabel(G.g) + '</span>'
-        + '<span class="sgd num">' + (prev ? '<b>+' + dur(r0.arrive - prev.arrive) + '</b> después del anterior' : 'Larga primero') + ' · ' + n + ' larga' + (n === 1 ? '' : 'n') + '</span>'
-        + '<span class="sgh num">' + (r0.start !== null ? hms(r0.start) : '—') + '</span></div>';
+        + '<span class="sgd num">' + (!n ? 'No larga ninguno' : prev ? '<b>+' + dur(r0.arrive - prev.arrive) + '</b> después del anterior' : 'Larga primero') + (n ? ' · ' + n + ' larga' + (n === 1 ? '' : 'n') : '') + '</span>'
+        + '<span class="sgh num">' + (n && r0.start !== null ? hms(r0.start) : '—') + '</span></div>';
       G.rows.forEach(r => {
         const p = P[r.num], out = isOut(p);
         s += '<div class="srow' + (r.num ? '' : ' pending') + (out ? ' out' : '') + '"><span class="n num">' + (esc(r.num) || '?') + '</span>'
@@ -241,7 +243,7 @@ window.R = (function () {
     const pm = pMap(parts);
     const a1 = ofStage(all, 1);
     const L = ['LLEGADAS 1ª ETAPA Y LARGADA 2ª', 'Orden\tN°\tCaballo / Jinete\tGrupo\tLlegada\tDif. anterior\tDif. 1°\tLargada 2ª'];
-    startList(a1, start2Of(race, all)).forEach((r, i, A) => L.push([r.pos, r.num || '?', pName(pm[r.num]), gLabel(r.group), hms(r.arrive), i ? '+' + dur(r.arrive - A[i - 1].arrive) : '', '+' + dur(r.off), r.start !== null ? hms(r.start) : ''].join('\t')));
+    let lastIn = null; startList(a1, start2Of(race, all)).forEach(r => { const o = isOut(pm[r.num]); const d = !o && lastIn !== null ? '+' + dur(r.arrive - lastIn) : ''; if (!o) lastIn = r.arrive; L.push([r.pos, r.num || '?', pName(pm[r.num]), gLabel(r.group), hms(r.arrive), o ? outLabel(pm[r.num]) : d, '+' + dur(r.off), !o && r.start !== null ? hms(r.start) : ''].join('\t')); });
     const res = results(all, race, parts);
     if (res.rows.length) {
       L.push(''); L.push('RESULTADOS' + (res.km1 || res.km2 ? ' · ' + kmText(race) : ''));
@@ -437,7 +439,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { VERSION: '28', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { VERSION: '31', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

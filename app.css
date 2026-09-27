@@ -337,3 +337,11 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 .colsw input[type=color]{width:52px;height:40px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface2)}
 
 .mark.pressing{transform:scale(.98);filter:brightness(.88);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+
+.lockmsg{font-size:14px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.lockmsg .ghost{font-size:13px;padding:6px 10px}
+
+.tinput{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.04em;max-width:7.5em}
+.tadj{display:inline-flex;gap:6px}
+.tadj .ghost{padding:8px 12px;font-weight:700}
+.linkbtn{font-size:13px;padding:4px 10px;margin-left:4px}
