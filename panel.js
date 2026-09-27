@@ -124,7 +124,7 @@
       const fresh = !firstRender && !seenGroups.has(g.t);
       seenGroups.add(g.t);
       const from = pos + 1; pos += g.horses.length;
-      h += '<div class="pg' + (i === 0 ? ' first' : '') + (fresh ? ' fresh' : '') + '"><span class="gl">Grupo ' + (i + 1) + '<small class="num">' + hms(g.t) + ' · ' + (from === pos ? from + '°' : from + '° a ' + pos + '°') + '</small></span><span class="gd num">' + (i === 0 ? '1° en llegar' : '+' + dur(g.t - gs[0].t)) + '</span><div class="pnums">';
+      h += '<div class="pg' + (i === 0 ? ' first' : '') + (fresh ? ' fresh' : '') + '"><span class="gl">Grupo ' + (i + 1) + '<small class="num">' + hms(g.t) + ' · ' + (from === pos ? from + '°' : pstage === 2 ? from + '° · puesta de ' + g.horses.length : from + '° a ' + pos + '°') + '</small></span><span class="gd num">' + (i === 0 ? '1° en llegar' : '+' + dur(g.t - gs[0].t)) + '</span><div class="pnums">';
       g.horses.forEach(a => { const p = P[a.num]; h += '<span class="pn num' + (a.num ? '' : ' pending') + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<small>' + tagHTML(p) + '</small>' : '') + '</span>'; });
       h += '</div></div>';
     });
@@ -152,7 +152,7 @@
 
   function renderRes() {
     const race = data.race || {}, res = results(all, race, data.participants), S2 = res.summary;
-    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (cls ? 'ganador' : 'primero en llegar') + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
     $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : '—', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : '—', S2.v2, S2.first2) + box('Raid completo', kmText(race) || '—', S2.vt, S2.firstT, ' total');
     let h = '<thead><tr><th>Pos.</th><th>N°</th><th>1ª etapa</th><th>2ª etapa</th><th>General</th></tr></thead><tbody>';
     if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay resultados.</td></tr>';

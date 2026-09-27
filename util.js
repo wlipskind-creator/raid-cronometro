@@ -218,7 +218,12 @@ window.R = (function () {
       if (x.arr2 != null) return -1; if (y.arr2 != null) return 1;
       return (x.arr1 || 0) - (y.arr1 || 0);
     });
-    let pos = 0; rows.forEach(r => { r.pos = (r.arr2 != null && !r.out) ? ++pos : null; });
+    // Puestos: los que llegan juntos (mismo segundo: "puesta") comparten el puesto; el siguiente salta (1, 1, 3…)
+    let n = 0, lastT = null, lastPos = null;
+    rows.forEach(r => {
+      if (r.arr2 == null || r.out) { r.pos = null; return; }
+      n++; r.pos = r.arr2 === lastT ? lastPos : n; lastT = r.arr2; lastPos = r.pos;
+    });
     const avg = l => { const v = l.filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
     const ok = rows.filter(r => !r.out);
     const win = rows.find(r => r.pos === 1) || null;
@@ -232,8 +237,9 @@ window.R = (function () {
         winner: win,
         // Promedio que se informa (como la planilla FEU): el del primero en llegar en cada etapa y el del ganador
         first1: (() => { const f = sorted(a1).find(a => a.num); const r = f && rows.find(x => x.num === f.num); return r && r.v1 != null ? { num: r.num, v: r.v1 } : null; })(),
-        first2: win && win.v2 != null ? { num: win.num, v: win.v2 } : null,
-        firstT: win && win.vt != null ? { num: win.num, v: win.vt } : null
+        first2: win && win.v2 != null ? { num: rows.filter(r => r.pos === 1).map(r => r.num).join(' y '), v: win.v2 } : null,
+        firstT: win && win.vt != null ? { num: rows.filter(r => r.pos === 1).map(r => r.num).join(' y '), v: win.vt } : null,
+        winners: rows.filter(r => r.pos === 1).map(r => r.num)
       }
     };
   }
@@ -270,7 +276,7 @@ window.R = (function () {
     [1, 2].forEach(st => {
       const rows = [['Orden', 'N°', 'Caballo / Jinete', 'Grupo', 'Hora de llegada', 'Dif. con el 1°']]; let pos = 0;
       const gs = groups(ofStage(all, st)); const f = gs[0];
-      gs.forEach((g, i) => g.horses.forEach(a => { pos++; rows.push([pos, a.num || '?', pName(pm[a.num]), i + 1, hms(g.t), '+' + dur(g.t - f.t)]); }));
+      gs.forEach((g, i) => { const from = pos + 1; g.horses.forEach(a => { pos++; rows.push([st === 2 ? from : pos, a.num || '?', pName(pm[a.num]), i + 1, hms(g.t), '+' + dur(g.t - f.t)]); }); });
       add('Llegadas ' + st + 'ª', rows);
     });
     const keys = [...new Set(parts.flatMap(p => Object.keys(p.data || {})))];
@@ -321,10 +327,11 @@ window.R = (function () {
     });
     const desc = new Set(parts.filter(p => st(p) === 'descalificado').map(p => p.num));
     const clasif = arr2.filter(a => !desc.has(a.num) && !(pm[a.num] && pm[a.num].noLarga)).map((a, i) => ({ pos: i + 1, num: a.num, llegada: a.t, total: (start0 != null && rest != null) ? a.t - start0 - rest : null }));
+    clasif.forEach((c, i) => { if (i && c.llegada === clasif[i - 1].llegada) c.pos = clasif[i - 1].pos; }); // empates: mismo puesto
     const fmtD = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return dd + '/' + m + '/' + y; };
     return { inst: club ? club.name : '', name: race.name || 'Raid', place: race.place || '', fecha: fmtD(race.date), km1, km2, dist: km1 + km2, start0,
       largaron1, aband1, t1, v1: speed(km1, t1), largaron2: larg2.length, aband2, t2, v2: speed(km2, t2), tt, vt: speed(km1 + km2, tt),
-      winner: win ? win.num : '', trofeo: race.trofeo || '', cierre: cierreOf(race, all).hora, neut, clasif, desc: [...desc].sort((x, y) => (+x) - (+y)) };
+      winner: res.summary.winners.length ? res.summary.winners.join(' y ') : '', trofeo: race.trofeo || '', cierre: cierreOf(race, all).hora, neut, clasif, desc: [...desc].sort((x, y) => (+x) - (+y)) };
   }
   function loadScriptOnce(src, test) {
     if (test()) return Promise.resolve();
@@ -439,7 +446,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { VERSION: '31', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { VERSION: '33', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

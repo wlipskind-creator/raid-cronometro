@@ -503,9 +503,10 @@
       const gSel = sel && sel.k === 'g' && sel.t === g.t;
       const diff = i === 0 ? '1°' : '+' + dur(g.t - f.t), dprev = i === 0 ? '' : '+' + dur(g.t - gs[i - 1].t) + ' del anterior';
       h += '<div class="grp' + (i === 0 ? ' first' : '') + (gSel ? ' selected' : '') + '">';
-      h += '<button class="ghead" data-act="group" data-t="' + g.t + '"><span class="gname">Grupo ' + (i + 1) + '</span><span class="gtime num">' + hms(g.t) + ' · ' + g.horses.length + ' cab.</span><span class="gdiff num">' + diff + (dprev ? '<small>' + dprev + '</small>' : '') + '</span></button><div class="chips">';
+      h += '<button class="ghead" data-act="group" data-t="' + g.t + '"><span class="gname">Grupo ' + (i + 1) + '</span><span class="gtime num">' + hms(g.t) + ' · ' + g.horses.length + ' cab.' + (stage === 2 && g.horses.length > 1 ? ' · puesta' : '') + '</span><span class="gdiff num">' + diff + (dprev ? '<small>' + dprev + '</small>' : '') + '</span></button><div class="chips">';
+      const from = pos + 1; // en la 2ª etapa los que llegan juntos comparten el puesto
       g.horses.forEach(a => { pos++; const s = sel && sel.k === 'h' && sel.id === a.id; const p = P[a.num];
-        h += '<button class="chip num' + (a.num ? '' : ' pending') + (s ? ' selected' : '') + '" data-act="horse" data-id="' + esc(a.id) + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<span class="nm">' + tagHTML(p) + '</span>' : '') + '<small>' + pos + '°</small></button>'; });
+        h += '<button class="chip num' + (a.num ? '' : ' pending') + (s ? ' selected' : '') + '" data-act="horse" data-id="' + esc(a.id) + '">' + (esc(a.num) || '?') + (p && pShort(p) ? '<span class="nm">' + tagHTML(p) + '</span>' : '') + '<small>' + (stage === 2 ? from : pos) + '°</small></button>'; });
       h += '<button class="chip add" data-act="addto" data-t="' + g.t + '" aria-label="Sumar caballo a este grupo">+</button></div>';
       if (gSel) h += '<div class="edit"><span class="hint">Corregir la hora de todo el grupo:</span><input id="edit-time" class="tinput num" type="text" inputmode="numeric" autocomplete="off" value="' + hms(g.t) + '"><span class="tadj"><button class="ghost" data-act="tadj" data-d="-1">−1 s</button><button class="ghost" data-act="tadj" data-d="1">+1 s</button></span><button class="ghost danger" data-act="delg" data-t="' + g.t + '">Borrar grupo</button><button class="ghost" data-act="close">Listo</button></div>';
       const hs = g.horses.find(a => sel && sel.k === 'h' && sel.id === a.id);
@@ -550,7 +551,7 @@
   // ---------- Resultados ----------
   function renderRes() {
     const race = data.race || {}, res = results(data.all, race, parts()), S2 = res.summary;
-    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (cls ? 'ganador' : 'primero en llegar') + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
     $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : 'sin km', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : 'sin km', S2.v2, S2.first2) + box('Raid completo', kmText(race) || 'sin km', S2.vt, S2.firstT, ' total');
     const warn = [];
     if (!res.km1 || !res.km2) warn.push('Faltan los kilómetros de cada etapa: los carga la FEU en Administración → Raids.');
