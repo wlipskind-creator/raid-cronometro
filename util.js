@@ -170,7 +170,7 @@ window.R = (function () {
   const ofStage = (arr, st) => (arr || []).filter(a => stageOf(a) === st);
   const kmOf = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; };
   const speed = (km, ms) => (km > 0 && ms > 0) ? km / (ms / 3600000) : null;
-  const fmtKmh = v => v == null ? '—' : v.toFixed(2).replace('.', ',') + ' km/h';
+  const fmtKmh = v => v == null ? '—' : v.toFixed(3).replace('.', ',') + ' km/h';
   const fmtKm = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + ' km';
   function kmText(r) {
     const a = kmOf(r && r.km1), b = kmOf(r && r.km2);
@@ -227,7 +227,11 @@ window.R = (function () {
         v1: { best: fast1 ? fast1.v1 : null, avg: avg(ok.map(r => r.v1)), n: ok.filter(r => r.v1 != null).length },
         v2: { best: (() => { const b = ok.filter(r => r.v2 != null).sort((a, b) => a.e2 - b.e2)[0]; return b ? b.v2 : null; })(), avg: avg(ok.map(r => r.v2)), n: ok.filter(r => r.v2 != null).length },
         vt: { best: win ? win.vt : null, avg: avg(ok.map(r => r.vt)), n: ok.filter(r => r.vt != null).length },
-        winner: win
+        winner: win,
+        // Promedio que se informa (como la planilla FEU): el del primero en llegar en cada etapa y el del ganador
+        first1: (() => { const f = sorted(a1).find(a => a.num); const r = f && rows.find(x => x.num === f.num); return r && r.v1 != null ? { num: r.num, v: r.v1 } : null; })(),
+        first2: win && win.v2 != null ? { num: win.num, v: win.v2 } : null,
+        firstT: win && win.vt != null ? { num: win.num, v: win.vt } : null
       }
     };
   }
@@ -242,7 +246,7 @@ window.R = (function () {
     if (res.rows.length) {
       L.push(''); L.push('RESULTADOS' + (res.km1 || res.km2 ? ' · ' + kmText(race) : ''));
       L.push('Puesto\tN°\tCaballo / Jinete\tTiempo 1ª\tProm. 1ª (km/h)\tTiempo 2ª\tProm. 2ª (km/h)\tTiempo total\tProm. general (km/h)');
-      const n = v => v == null ? '' : v.toFixed(2).replace('.', ',');
+      const n = v => v == null ? '' : v.toFixed(3).replace('.', ',');
       res.rows.forEach(r => L.push([r.pos || (r.out ? outLabel(r.p) : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)].join('\t')));
     }
     const out = (parts || []).filter(p => isOut(p)).sort(byNum);
@@ -269,7 +273,7 @@ window.R = (function () {
     });
     const keys = [...new Set(parts.flatMap(p => Object.keys(p.data || {})))];
     add('Participantes', [['N°', ...keys, 'Estado']].concat(parts.slice().sort(byNum).map(p => [p.num, ...keys.map(k => (p.data || {})[k] || ''), outLabel(p)])));
-    const res = results(all, race, parts), n = v => v == null ? '' : Math.round(v * 100) / 100;
+    const res = results(all, race, parts), n = v => v == null ? '' : Math.round(v * 1000) / 1000;
     add('Resultados', [['Puesto', 'N°', 'Caballo / Jinete', 'Tiempo 1ª', 'Prom. 1ª (km/h)', 'Tiempo 2ª', 'Prom. 2ª (km/h)', 'Tiempo total', 'Prom. general (km/h)']]
       .concat(res.rows.map(r => [r.pos || (r.out ? outLabel(r.p) : ''), r.num, pName(r.p), r.e1 != null ? dur(r.e1) : '', n(r.v1), r.e2 != null ? dur(r.e2) : '', n(r.v2), r.tot != null ? dur(r.tot) : '', n(r.vt)])));
     XLSX.writeFile(wb, fileName || ((race.name || 'raid').replace(/[\\/:*?"<>|]/g, '') + '.xlsx'));
@@ -433,7 +437,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { VERSION: '25', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { VERSION: '28', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

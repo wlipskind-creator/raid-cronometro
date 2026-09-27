@@ -137,10 +137,10 @@
   applyStage();
 
   // ---------- LLEGÓ ----------
-  function mark() {
+  function mark(tt) {
     if (rol === 'planillero') return;
     keepAwake();
-    const t = sec(S.now());
+    const t = sec(tt != null ? tt : S.now());
     if (!data.race) { msg('Esperando los datos del raid…', true); return; }
     if (buf && rol === 'completo' && !pending().length && !validSel()) {
       const c = check(buf, null); msg(c.text, c.warn);
@@ -148,7 +148,26 @@
     } else { addA(t, ''); msg(''); }
     buzz(); render();
   }
-  $('mark').addEventListener('pointerdown', e => { e.preventDefault(); mark(); });
+  // LLEGÓ: la hora se toma en el momento en que se apoya el dedo, pero la llegada se guarda
+  // recién al levantarlo sin haberlo arrastrado. Así, deslizar la pantalla por encima del botón no marca nada.
+  let press = null;
+  const endPress = () => { press = null; $('mark').classList.remove('pressing'); };
+  $('mark').addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    press = { t: S.now(), x: e.clientY, y: e.clientY, sx: e.clientX, id: e.pointerId, y0: window.scrollY };
+    $('mark').classList.add('pressing');
+  });
+  $('mark').addEventListener('pointermove', e => {
+    if (press && e.pointerId === press.id && (Math.abs(e.clientY - press.y) > 10 || Math.abs(e.clientX - press.sx) > 10)) endPress();
+  });
+  $('mark').addEventListener('pointercancel', endPress);
+  $('mark').addEventListener('pointerleave', endPress);
+  $('mark').addEventListener('pointerup', e => {
+    const p = press; endPress();
+    if (!p || e.pointerId !== p.id || Math.abs(window.scrollY - p.y0) > 4 || S.now() - p.t > 2000) return;
+    e.preventDefault(); mark(p.t);
+  });
+  window.addEventListener('scroll', () => { if (press) endPress(); }, { passive: true });
   $('mark').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mark(); } });
 
   function sameGroupTime() {
@@ -477,8 +496,8 @@
   // ---------- Resultados ----------
   function renderRes() {
     const race = data.race || {}, res = results(data.all, race, parts()), S2 = res.summary;
-    const box = (l, km, o, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(o.avg) + '</span><span class="s">promedio de ' + o.n + ' caballo' + (o.n === 1 ? '' : 's') + (o.best != null ? ' · ' + (cls ? 'ganador' : 'más rápido') + ': ' + fmtKmh(o.best) : '') + '</span></div>';
-    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : 'sin km', S2.v1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : 'sin km', S2.v2) + box('Raid completo', kmText(race) || 'sin km', S2.vt, ' total');
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (cls ? 'ganador' : 'primero en llegar') + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : 'sin km', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : 'sin km', S2.v2, S2.first2) + box('Raid completo', kmText(race) || 'sin km', S2.vt, S2.firstT, ' total');
     const warn = [];
     if (!res.km1 || !res.km2) warn.push('Faltan los kilómetros de cada etapa: los carga la FEU en Administración → Raids.');
     if (!res.hasStart0) warn.push('Falta la hora de largada de la 1ª etapa (pestaña Largada).');

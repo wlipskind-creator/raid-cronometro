@@ -152,8 +152,8 @@
 
   function renderRes() {
     const race = data.race || {}, res = results(all, race, data.participants), S2 = res.summary;
-    const box = (l, km, o, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(o.avg) + '</span><span class="s">promedio de ' + o.n + ' caballo' + (o.n === 1 ? '' : 's') + (o.best != null ? ' · ' + (cls ? 'ganador' : 'más rápido') + ': ' + fmtKmh(o.best) : '') + '</span></div>';
-    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : '—', S2.v1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : '—', S2.v2) + box('Raid completo', kmText(race) || '—', S2.vt, ' total');
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (cls ? 'ganador' : 'primero en llegar') + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : '—', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : '—', S2.v2, S2.first2) + box('Raid completo', kmText(race) || '—', S2.vt, S2.firstT, ' total');
     let h = '<thead><tr><th>Pos.</th><th>N°</th><th>1ª etapa</th><th>2ª etapa</th><th>General</th></tr></thead><tbody>';
     if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay resultados.</td></tr>';
     res.rows.forEach(r => {
