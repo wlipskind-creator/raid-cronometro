@@ -165,7 +165,7 @@
 
   // ---------- LLEGÓ ----------
   function mark(tt) {
-    if (rol === 'planillero' || $('mark').disabled) return;
+    if (rol === 'planillero' || $('mark').disabled || $('app').classList.contains('ro')) return;
     keepAwake();
     const t = sec(tt != null ? tt : S.now());
     if (!data.race) { msg('Esperando los datos del raid…', true); return; }
@@ -213,6 +213,11 @@
   // ---------- Números: teclado y panel ----------
   // LLEGÓ bloqueado: en la 1ª etapa cuando ya empezó a llegar la 2ª; en la 2ª cuando llegaron todos los que largaron
   var unlocked = false;
+  var roOpen = {}, roAsk = false; // raids terminados habilitados para corregir (solo en este teléfono y mientras esté abierta la app)
+  $('ro-open').addEventListener('click', () => { roAsk = true; render(); });
+  $('ro-no').addEventListener('click', () => { roAsk = false; render(); });
+  $('ro-yes').addEventListener('click', () => { roAsk = false; roOpen[raceSel] = true; render(); });
+  $('ro-lock').addEventListener('click', () => { roOpen[raceSel] = false; render(); });
   $('unlock').addEventListener('click', () => { unlocked = true; render(); });
   var padOpen = false;
   try { padOpen = localStorage.getItem('raid-pad') === '1'; } catch (e) {}
@@ -231,7 +236,7 @@
     assign(b.dataset.num); buzz(); render();
   });
   document.addEventListener('keydown', e => {
-    if (view !== 'lleg' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || $('app').hidden || rol === 'marcador') return;
+    if (view !== 'lleg' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || $('app').hidden || $('app').classList.contains('ro') || rol === 'marcador') return;
     if (/^[0-9]$/.test(e.key) && buf.length < 4) { buf += e.key; render(); }
     else if (e.key === 'Backspace') { buf = buf.slice(0, -1); render(); }
     else if (e.key === 'Enter' && document.activeElement !== $('mark')) { e.preventDefault(); assign(buf); render(); }
@@ -438,7 +443,13 @@
     $('race-logo').innerHTML = data.race ? logoHTML(club, 36) : '';
     $('race-name').innerHTML = esc(race.name || 'Raid') + '<small>' + esc(data.race ? clubPlace(race, club) : 'Cronometristas') + ' · ' + esc(fmtDate(race.date)) + '</small>';
     $('norace').hidden = !gone;
-    $('done-banner').hidden = !(data.race && raceStatus(data.race) === 'terminado');
+    // Raid terminado: todo queda bloqueado hasta que se confirme que se quiere corregir
+    const fin = !!(data.race && raceStatus(data.race) === 'terminado');
+    const ro = fin && !roOpen[raceSel];
+    $('done-banner').hidden = !fin;
+    $('app').classList.toggle('ro', ro);
+    $('ro-open').hidden = !ro || roAsk; $('ro-confirm').hidden = !ro || !roAsk; $('ro-lock').hidden = ro;
+    $('ro-text').innerHTML = ro ? 'Este raid está <b>terminado</b>: los datos quedan bloqueados para que no se cambien por error. Se puede ver todo y descargar la planilla.' : 'Raid <b>terminado</b> con <b>cambios habilitados</b> en este teléfono. Cuando termines de corregir, volvé a bloquearlo.';
     $('mark').disabled = gone;
     $('carr-logo').innerHTML = logoHTML(club, 48);
     $('carr-name').textContent = race.name || 'Raid';
@@ -551,7 +562,7 @@
   // ---------- Resultados ----------
   function renderRes() {
     const race = data.race || {}, res = results(data.all, race, parts()), S2 = res.summary;
-    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + '</span></div>';
     $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : 'sin km', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : 'sin km', S2.v2, S2.first2) + box('Raid completo', kmText(race) || 'sin km', S2.vt, S2.firstT, ' total');
     const warn = [];
     if (!res.km1 || !res.km2) warn.push('Faltan los kilómetros de cada etapa: los carga la FEU en Administración → Raids.');
@@ -572,6 +583,9 @@
     const ci = S.clockInfo();
     $('clocklbl').textContent = S.mode === 'firebase' ? (ci.synced ? 'Hora del servidor' : 'Hora (ajuste guardado)') : 'Hora del teléfono';
     $('clockinfo').textContent = S.mode === 'firebase' ? (ci.synced ? 'Reloj sincronizado con el servidor (este teléfono estaba ' + (Math.abs(ci.offset) < 1000 ? 'en hora' : (ci.offset > 0 ? 'atrasado ' : 'adelantado ') + dur(ci.offset)) + ').' : 'Reloj todavía sin sincronizar: se usa el último ajuste guardado.') : '';
-    const f = groups(data.arrivals)[0]; $('since').textContent = f ? '+' + dur(sec(now) - f.t) : '—';
+    // "Desde el 1°": corre mientras el raid está en curso; terminado, queda fijo en la diferencia del último que llegó
+    const gs = groups(data.arrivals), f = gs[0];
+    const fin = !!(data.race && raceStatus(data.race) === 'terminado');
+    $('since').textContent = !f ? '—' : '+' + dur((fin ? gs[gs.length - 1].t : sec(now)) - f.t);
   }
 })();

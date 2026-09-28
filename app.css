@@ -345,3 +345,6 @@ input[type="date"]::-webkit-date-and-time-value,input[type="time"]::-webkit-date
 .tadj{display:inline-flex;gap:6px}
 .tadj .ghost{padding:8px 12px;font-weight:700}
 .linkbtn{font-size:13px;padding:4px 10px;margin-left:4px}
+
+/* Raid terminado: bloqueado hasta confirmar */
+#app.ro [data-lock]{pointer-events:none;opacity:.5;filter:grayscale(.4)}

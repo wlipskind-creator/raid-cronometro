@@ -290,8 +290,8 @@ window.R = (function () {
   const hsLong = ms => { if (ms == null) return ''; const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), x = t % 60; return h + ' Hs. ' + pad2(m) + "' " + pad2(x) + "''"; };
   const hsClock = t => { if (t == null) return ''; const d = new Date(t); return d.getHours() + ' hs. ' + pad2(d.getMinutes()) + "' " + pad2(d.getSeconds()) + "''"; };
   const kmh3 = v => v == null ? '—' : v.toFixed(3).replace('.', ',') + ' Kmts./Hs.';
-  // Cierre de control: llegada del primero en la 2ª etapa + 60 min (raids de 90 km o más) o + 50 min (menores).
-  const cierreMinOf = race => (kmOf(race && race.km1) + kmOf(race && race.km2)) >= 90 ? 60 : 50;
+  // Cierre de control (2ª etapa): llegada del ganador + 45 min en raids de menos de 100 km, o + 60 min si son de 100 km o más.
+  const cierreMinOf = race => (kmOf(race && race.km1) + kmOf(race && race.km2)) >= 100 ? 60 : 45;
   function cierreOf(race, all) {
     if (race && race.cierre) return { hora: race.cierre, auto: false };
     const a2 = ofStage(all, 2).filter(a => a.num);
@@ -446,7 +446,7 @@ window.R = (function () {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
-  return { VERSION: '33', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
+  return { VERSION: '36', clubStripe, pad2, sec, hms, dur, sorted, groups, baseStart, startList, startTableHTML, gLabel, sheet, esc, registerSW,
     STATUS, statusOf, isOut, outLabel, VET_NOTES, VET_OUT, numKey, byNum, parseTable, toParticipants, pName, pShort, pSur, tagHTML, pMap,
     RSTATUS, todayStr, raceStatus, fmtDate, sortRaces, logoHTML, initials, clubPlace,
     stageOf, ofStage, kmOf, fmtKmh, fmtKm, kmText, results, neutralOf, start2Of, exportXlsx, reportData, reportPDF, vetMinOf, hsLong, hsClock, cierreOf, cierreMinOf };

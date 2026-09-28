@@ -140,8 +140,9 @@
     const s2 = start2Of(race, all);
     const rows = startList(ofStage(all, 1), s2);
     $('larg-note').textContent = s2 ? 'Cada caballo larga con la diferencia con que llegó. Los del mismo grupo largan juntos.' : 'La hora de largada todavía no está definida. Se muestran las diferencias.';
-    const next = rows.find(r => !out(r) && r.start !== null && r.start > now - 1000);
-    $('startlist').innerHTML = window.R.startTableHTML(rows, P, { now });
+    const fin = raceStatus(race) === 'terminado'; // terminado: no hay cuentas regresivas
+    const next = fin ? null : rows.find(r => !out(r) && r.start !== null && r.start > now - 1000);
+    $('startlist').innerHTML = window.R.startTableHTML(rows, P, fin ? {} : { now });
     if (next) {
       const who = rows.filter(r => !out(r) && r.start === next.start).map(r => esc(r.num) || '?').join(' · ');
       const gl = window.R.gLabel(next.group);
@@ -152,7 +153,7 @@
 
   function renderRes() {
     const race = data.race || {}, res = results(all, race, data.participants), S2 = res.summary;
-    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + (o.avg != null && o.n > 1 ? ' · promedio de los ' + o.n + ': ' + fmtKmh(o.avg) : '') + '</span></div>';
+    const box = (l, km, o, f, cls) => '<div class="rbox' + (cls || '') + '"><span class="l">' + l + '</span><span class="k">' + km + '</span><span class="v num">' + fmtKmh(f ? f.v : null) + '</span><span class="s">' + (f ? (String(f.num).includes(' y ') ? (cls ? 'ganadores en puesta' : 'primeros en puesta') : (cls ? 'ganador' : 'primero en llegar')) + ': N° ' + esc(f.num) : 'todavía sin llegadas') + '</span></div>';
     $('resum').innerHTML = box('1ª etapa', res.km1 ? res.km1.toString().replace('.', ',') + ' km' : '—', S2.v1, S2.first1) + box('2ª etapa', res.km2 ? res.km2.toString().replace('.', ',') + ' km' : '—', S2.v2, S2.first2) + box('Raid completo', kmText(race) || '—', S2.vt, S2.firstT, ' total');
     let h = '<thead><tr><th>Pos.</th><th>N°</th><th>1ª etapa</th><th>2ª etapa</th><th>General</th></tr></thead><tbody>';
     if (!res.rows.length) h += '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Todavía no hay resultados.</td></tr>';
@@ -166,7 +167,7 @@
   setInterval(() => {
     if (!current) return;
     if (lastUpdate) $('updated').textContent = 'Actualizado ' + hms(lastUpdate);
-    if (data.race && start2Of(data.race, all)) renderStart();
+    if (data.race && start2Of(data.race, all) && raceStatus(data.race) !== 'terminado') renderStart();
   }, 1000);
   route();
 })();
